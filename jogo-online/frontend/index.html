@@ -7,16 +7,22 @@
 </head>
 <body>
   <div class="top-bar">
-    <div id="turnStatus"></div>
+    <div>
+      <strong>Protótipo: Batalha Espacial</strong>
+      <div class="hint" id="turnStatus"></div>
+    </div>
     <div class="controls">
-      <button id="modeMove">Mover</button>
-      <button id="modeFire">Atirar</button>
-      <button id="finishPlanning">Finalizar</button>
-      <button id="executeTurn">Executar</button>
+      <button id="modeMove" class="active">Modo: Movimento</button>
+      <button id="modeFire">Modo: Tiro</button>
+      <button id="finishPlanning">Finalizar planejamento</button>
+      <button id="executeTurn">Executar turno</button>
+      <button id="clearDestinations">Limpar destinos</button>
     </div>
   </div>
-  <canvas id="spaceCanvas" width="980" height="600"></canvas>
-  <div id="legend"></div>
+  <div class="arena-wrap">
+    <canvas id="spaceCanvas"></canvas>
+  </div>
+  <div class="legend" id="legend"></div>
 
   <script src="../game/engine.js"></script>
   <script src="ui.js"></script>
