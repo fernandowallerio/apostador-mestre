@@ -528,7 +528,6 @@
             startY: ship.y,
             dirX: dx / distance,
             dirY: dy / distance,
-            maxDistance: SHOT_MAX_DISTANCE,
             damage: ship.damage,
           };
         });
@@ -547,8 +546,6 @@
         dirX: shot.dirX,
         dirY: shot.dirY,
         damage: shot.damage,
-        traveled: 0,
-        maxDistance: shot.maxDistance,
         alive: true,
       }));
 
@@ -573,13 +570,21 @@
         for (const projectile of state.projectiles) {
           if (!projectile.alive) continue;
           const step = SHOT_SPEED * dt;
-          projectile.traveled += step;
-          if (projectile.traveled >= projectile.maxDistance) {
+          projectile.x += projectile.dirX * step;
+          projectile.y += projectile.dirY * step;
+
+          const outMargin = 8;
+          const w = canvas.clientWidth;
+          const h = canvas.clientHeight;
+          if (
+            projectile.x < -outMargin ||
+            projectile.y < -outMargin ||
+            projectile.x > w + outMargin ||
+            projectile.y > h + outMargin
+          ) {
             projectile.alive = false;
             continue;
           }
-          projectile.x += projectile.dirX * step;
-          projectile.y += projectile.dirY * step;
 
           for (const target of getAliveShips()) {
             if (target.id === projectile.ownerShipId) continue;
