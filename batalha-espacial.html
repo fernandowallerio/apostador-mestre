@@ -118,10 +118,11 @@
   <div class="top-bar">
     <div>
       <strong>Protótipo: Batalha Espacial</strong>
-      <div class="hint">Clique em uma nave, arraste para definir o destino (dentro do alcance) e solte para salvar.</div>
+      <div class="hint">Clique e arraste para definir destinos; depois use “Executar turno” para mover as naves suavemente.</div>
     </div>
     <div class="controls">
       <a class="link-btn" href="index.html">Voltar ao site</a>
+      <button id="executeTurn" type="button">Executar turno</button>
       <button id="clearDestinations" type="button">Limpar destinos</button>
     </div>
   </div>
@@ -147,6 +148,8 @@
       selectedShipId: null,
       dragging: false,
       dragPoint: null,
+      animating: false,
+      animationFrameId: null,
     };
 
     function resizeCanvas() {
@@ -295,7 +298,72 @@
       };
     }
 
+    function easeInOutCubic(t) {
+      if (t < 0.5) return 4 * t * t * t;
+      return 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function executeTurn() {
+      if (state.animating) return;
+
+      const movingShips = ships
+        .filter((ship) => ship.destination)
+        .map((ship) => {
+          const target = { ...ship.destination };
+          const distance = Math.hypot(target.x - ship.x, target.y - ship.y);
+          return {
+            ship,
+            startX: ship.x,
+            startY: ship.y,
+            endX: target.x,
+            endY: target.y,
+            duration: Math.max(380, Math.min(1400, distance * 4.2)),
+          };
+        });
+
+      if (movingShips.length === 0) return;
+
+      state.animating = true;
+      state.dragging = false;
+      state.dragPoint = null;
+
+      const startedAt = performance.now();
+
+      function tick(now) {
+        const elapsed = now - startedAt;
+        let anyShipMoving = false;
+
+        for (const movement of movingShips) {
+          const t = Math.min(1, elapsed / movement.duration);
+          const eased = easeInOutCubic(t);
+          movement.ship.x = movement.startX + (movement.endX - movement.startX) * eased;
+          movement.ship.y = movement.startY + (movement.endY - movement.startY) * eased;
+          if (t < 1) anyShipMoving = true;
+        }
+
+        draw();
+
+        if (anyShipMoving) {
+          state.animationFrameId = requestAnimationFrame(tick);
+          return;
+        }
+
+        for (const movement of movingShips) {
+          movement.ship.x = movement.endX;
+          movement.ship.y = movement.endY;
+          movement.ship.destination = null;
+        }
+
+        state.animating = false;
+        state.animationFrameId = null;
+        draw();
+      }
+
+      state.animationFrameId = requestAnimationFrame(tick);
+    }
+
     canvas.addEventListener('mousedown', (event) => {
+      if (state.animating) return;
       const point = toCanvasPoint(event);
       const clickedShip = getShipAt(point.x, point.y);
       if (clickedShip) {
@@ -313,6 +381,7 @@
     });
 
     canvas.addEventListener('mousemove', (event) => {
+      if (state.animating) return;
       if (!state.dragging) return;
       const selectedShip = getSelectedShip();
       if (!selectedShip) return;
@@ -322,6 +391,7 @@
     });
 
     window.addEventListener('mouseup', () => {
+      if (state.animating) return;
       if (!state.dragging) return;
       const selectedShip = getSelectedShip();
       if (selectedShip && state.dragPoint) {
@@ -332,7 +402,12 @@
       draw();
     });
 
+    document.getElementById('executeTurn').addEventListener('click', () => {
+      executeTurn();
+    });
+
     document.getElementById('clearDestinations').addEventListener('click', () => {
+      if (state.animating) return;
       for (const ship of ships) {
         ship.destination = null;
       }
