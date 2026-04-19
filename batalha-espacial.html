@@ -205,7 +205,7 @@
       destructionEffects: [],
     };
 
-    const SHOT_SPEED = 0.34; // px/ms (ritmo mais tático)
+    const SHOT_SPEED = 0.272; // px/ms (aprox. 20% mais lento)
     const HIT_RADIUS = 13;
 
     function resizeCanvas() {
@@ -540,7 +540,7 @@
             startY: ship.y,
             endX: target.x,
             endY: target.y,
-            duration: Math.max(420, Math.min(2600, (distance * 6.4) / ship.speed)),
+            duration: Math.max(460, Math.min(2900, (distance * 6.9) / ship.speed)),
           };
         });
 
