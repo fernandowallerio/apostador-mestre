@@ -176,12 +176,12 @@
 
     const stars = [];
     const ships = [
-      { id: 1, player: 1, name: 'P1 Interceptor', x: 140, y: 180, range: 110, color: '#58a6ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
-      { id: 2, player: 1, name: 'P1 Fragata', x: 260, y: 290, range: 160, color: '#6db8ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
-      { id: 3, player: 1, name: 'P1 Cruzador', x: 360, y: 160, range: 220, color: '#8bcbff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
-      { id: 4, player: 2, name: 'P2 Interceptor', x: 840, y: 180, range: 110, color: '#ff8a8a', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
-      { id: 5, player: 2, name: 'P2 Fragata', x: 720, y: 290, range: 160, color: '#ff9f9f', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
-      { id: 6, player: 2, name: 'P2 Cruzador', x: 620, y: 160, range: 220, color: '#ffb3b3', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
+      { id: 1, player: 1, type: 'Interceptor', name: 'P1 Interceptor', x: 140, y: 180, range: 190, damage: 15, size: 11, color: '#58a6ff', destination: null, fireTarget: null, hp: 70, maxHp: 70, alive: true, hitFlashUntil: 0 },
+      { id: 2, player: 1, type: 'Fragata', name: 'P1 Fragata', x: 260, y: 290, range: 145, damage: 25, size: 14, color: '#6db8ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
+      { id: 3, player: 1, type: 'Cruzador', name: 'P1 Cruzador', x: 360, y: 160, range: 105, damage: 38, size: 18, color: '#8bcbff', destination: null, fireTarget: null, hp: 145, maxHp: 145, alive: true, hitFlashUntil: 0 },
+      { id: 4, player: 2, type: 'Interceptor', name: 'P2 Interceptor', x: 840, y: 180, range: 190, damage: 15, size: 11, color: '#ff8a8a', destination: null, fireTarget: null, hp: 70, maxHp: 70, alive: true, hitFlashUntil: 0 },
+      { id: 5, player: 2, type: 'Fragata', name: 'P2 Fragata', x: 720, y: 290, range: 145, damage: 25, size: 14, color: '#ff9f9f', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
+      { id: 6, player: 2, type: 'Cruzador', name: 'P2 Cruzador', x: 620, y: 160, range: 105, damage: 38, size: 18, color: '#ffb3b3', destination: null, fireTarget: null, hp: 145, maxHp: 145, alive: true, hitFlashUntil: 0 },
     ];
 
     const state = {
@@ -201,7 +201,6 @@
 
     const SHOT_MAX_DISTANCE = 280;
     const SHOT_SPEED = 0.6; // px/ms
-    const SHOT_DAMAGE = 25;
     const HIT_RADIUS = 13;
 
     function resizeCanvas() {
@@ -342,7 +341,7 @@
 
     function drawShip(ship, selected) {
       const now = performance.now();
-      const size = 14;
+      const size = ship.size || 14;
       const p1 = { x: ship.x, y: ship.y - size };
       const p2 = { x: ship.x - size * 0.75, y: ship.y + size * 0.75 };
       const p3 = { x: ship.x + size * 0.75, y: ship.y + size * 0.75 };
@@ -530,6 +529,7 @@
             dirX: dx / distance,
             dirY: dy / distance,
             maxDistance: SHOT_MAX_DISTANCE,
+            damage: ship.damage,
           };
         });
 
@@ -546,6 +546,7 @@
         y: shot.startY,
         dirX: shot.dirX,
         dirY: shot.dirY,
+        damage: shot.damage,
         traveled: 0,
         maxDistance: shot.maxDistance,
         alive: true,
@@ -584,7 +585,7 @@
             if (target.id === projectile.ownerShipId) continue;
             if (Math.hypot(projectile.x - target.x, projectile.y - target.y) <= HIT_RADIUS) {
               addImpactEffect(projectile.x, projectile.y);
-              target.hp = Math.max(0, target.hp - SHOT_DAMAGE);
+              target.hp = Math.max(0, target.hp - projectile.damage);
               target.hitFlashUntil = performance.now() + 180;
               if (target.hp === 0) {
                 addDestructionEffect(target.x, target.y);
@@ -735,7 +736,9 @@
           <span class="swatch" style="background:${ship.color}"></span>
           <strong>${ship.name}</strong><br>
           Time: <strong>Jogador ${ship.player}</strong><br>
+          Classe: <strong>${ship.type}</strong><br>
           Alcance de movimento: <strong>${ship.range}px</strong><br>
+          Dano por tiro: <strong>${ship.damage}</strong><br>
           Vida: <strong>${ship.alive ? `${ship.hp} HP` : 'Destruída'}</strong>
         </div>
       `).join('');
