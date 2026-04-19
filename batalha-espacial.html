@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Batalha Espacial – Protótipo</title>
+  <style>
+    :root {
+      --bg: #050816;
+      --panel: #0f1629;
+      --text: #dbe7ff;
+      --accent: #58a6ff;
+      --accent-2: #8bffcf;
+      --danger: #ff8a8a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: radial-gradient(circle at 20% 10%, #111a33 0%, var(--bg) 45%, #02040c 100%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .top-bar {
+      width: min(980px, 100%);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: rgba(15, 22, 41, 0.9);
+      border: 1px solid rgba(88, 166, 255, 0.35);
+      border-radius: 10px;
+      padding: 10px 12px;
+      backdrop-filter: blur(2px);
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button, .link-btn {
+      border: 1px solid rgba(88, 166, 255, 0.45);
+      background: #12203f;
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 14px;
+      transition: transform 0.08s ease, border-color 0.2s ease;
+    }
+
+    button:hover, .link-btn:hover {
+      border-color: var(--accent-2);
+      transform: translateY(-1px);
+    }
+
+    button.active {
+      border-color: #ff8a8a;
+      box-shadow: inset 0 0 0 1px rgba(255, 138, 138, 0.35);
+      background: #2b1620;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .hint {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    #turnStatus {
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      padding: 2px 0;
+    }
+
+    #turnStatus.turn-p1 {
+      color: #8cc9ff;
+      text-shadow: 0 0 10px rgba(88, 166, 255, 0.5);
+    }
+
+    #turnStatus.turn-p2 {
+      color: #ffb0b0;
+      text-shadow: 0 0 10px rgba(255, 138, 138, 0.45);
+    }
+
+    #turnStatus.turn-ready {
+      color: #8bffcf;
+      text-shadow: 0 0 10px rgba(139, 255, 207, 0.55);
+    }
+
+    .arena-wrap {
+      width: min(980px, 100%);
+      background: rgba(8, 12, 22, 0.92);
+      border: 1px solid rgba(88, 166, 255, 0.25);
+      border-radius: 12px;
+      padding: 8px;
+    }
+
+    canvas {
+      width: 100%;
+      height: min(68vh, 620px);
+      display: block;
+      border-radius: 8px;
+      background: transparent;
+      cursor: crosshair;
+    }
+
+    .legend {
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .legend-item {
+      background: rgba(15, 22, 41, 0.8);
+      border: 1px solid rgba(88, 166, 255, 0.25);
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div>
+      <strong>Protótipo: Batalha Espacial</strong>
+      <div class="hint">Jogador 1 planeja, depois Jogador 2. Após ambos finalizarem, execute o turno simultâneo.</div>
+      <div class="hint" id="turnStatus"></div>
+    </div>
+    <div class="controls">
+      <a class="link-btn" href="index.html">Voltar ao site</a>
+      <button id="modeMove" type="button" class="active">Modo: Movimento</button>
+      <button id="modeFire" type="button">Modo: Tiro</button>
+      <button id="finishPlanning" type="button">Finalizar planejamento</button>
+      <button id="executeTurn" type="button">Executar turno</button>
+      <button id="clearDestinations" type="button">Limpar destinos</button>
+    </div>
+  </div>
+
+  <div class="arena-wrap">
+    <canvas id="spaceCanvas" aria-label="Área de batalha espacial"></canvas>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <script>
+    const canvas = document.getElementById('spaceCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const stars = [];
+    const ships = [
+      { id: 1, player: 1, type: 'Interceptor', name: 'P1 Interceptor', x: 120, y: 140, moveRange: 180, shotRange: 420, speed: 1.25, damage: 15, size: 11, color: '#58a6ff', destination: null, fireTarget: null, hp: 80, maxHp: 80, alive: true, hitFlashUntil: 0 },
+      { id: 2, player: 1, type: 'Fragata', name: 'P1 Fragata', x: 210, y: 240, moveRange: 150, shotRange: 360, speed: 1.0, damage: 25, size: 14, color: '#6db8ff', destination: null, fireTarget: null, hp: 120, maxHp: 120, alive: true, hitFlashUntil: 0 },
+      { id: 3, player: 1, type: 'Cruzador', name: 'P1 Cruzador', x: 300, y: 120, moveRange: 110, shotRange: 340, speed: 0.8, damage: 40, size: 18, color: '#8bcbff', destination: null, fireTarget: null, hp: 180, maxHp: 180, alive: true, hitFlashUntil: 0 },
+      { id: 4, player: 1, type: 'Sniper', name: 'P1 Sniper', x: 180, y: 360, moveRange: 120, shotRange: 600, speed: 0.85, damage: 50, size: 12, color: '#74b7ff', destination: null, fireTarget: null, hp: 70, maxHp: 70, alive: true, hitFlashUntil: 0 },
+      { id: 5, player: 1, type: 'Artilharia', name: 'P1 Artilharia', x: 320, y: 300, moveRange: 90, shotRange: 450, speed: 0.6, damage: 60, size: 19, color: '#9ad7ff', destination: null, fireTarget: null, hp: 150, maxHp: 150, alive: true, hitFlashUntil: 0 },
+      { id: 6, player: 1, type: 'Rastreadora', name: 'P1 Rastreadora', x: 380, y: 230, moveRange: 120, shotRange: 420, speed: 0.9, damage: 35, size: 13, color: '#8ec8ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
+      { id: 7, player: 2, type: 'Interceptor', name: 'P2 Interceptor', x: 860, y: 140, moveRange: 180, shotRange: 420, speed: 1.25, damage: 15, size: 11, color: '#ff8a8a', destination: null, fireTarget: null, hp: 80, maxHp: 80, alive: true, hitFlashUntil: 0 },
+      { id: 8, player: 2, type: 'Fragata', name: 'P2 Fragata', x: 770, y: 240, moveRange: 150, shotRange: 360, speed: 1.0, damage: 25, size: 14, color: '#ff9f9f', destination: null, fireTarget: null, hp: 120, maxHp: 120, alive: true, hitFlashUntil: 0 },
+      { id: 9, player: 2, type: 'Cruzador', name: 'P2 Cruzador', x: 680, y: 120, moveRange: 110, shotRange: 340, speed: 0.8, damage: 40, size: 18, color: '#ffb3b3', destination: null, fireTarget: null, hp: 180, maxHp: 180, alive: true, hitFlashUntil: 0 },
+      { id: 10, player: 2, type: 'Sniper', name: 'P2 Sniper', x: 800, y: 360, moveRange: 120, shotRange: 600, speed: 0.85, damage: 50, size: 12, color: '#ff9a9a', destination: null, fireTarget: null, hp: 70, maxHp: 70, alive: true, hitFlashUntil: 0 },
+      { id: 11, player: 2, type: 'Artilharia', name: 'P2 Artilharia', x: 660, y: 300, moveRange: 90, shotRange: 450, speed: 0.6, damage: 60, size: 19, color: '#ffc0c0', destination: null, fireTarget: null, hp: 150, maxHp: 150, alive: true, hitFlashUntil: 0 },
+      { id: 12, player: 2, type: 'Rastreadora', name: 'P2 Rastreadora', x: 600, y: 230, moveRange: 120, shotRange: 420, speed: 0.9, damage: 35, size: 13, color: '#ffb0b0', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
+    ];
+
+    const state = {
+      selectedShipId: null,
+      dragging: false,
+      dragPoint: null,
+      dragType: 'move',
+      mode: 'move',
+      animating: false,
+      animationFrameId: null,
+      projectiles: [],
+      currentPlanningPlayer: 1,
+      planningDone: { 1: false, 2: false },
+      impactEffects: [],
+      destructionEffects: [],
+    };
+
+    const SHOT_SPEED = 0.272; // px/ms (aprox. 20% mais lento)
+    const HIT_RADIUS = 13;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildStars();
+      draw();
+    }
+
+    function buildStars() {
+      stars.length = 0;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const amount = Math.max(120, Math.floor((width * height) / 4500));
+      for (let i = 0; i < amount; i += 1) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          r: Math.random() * 1.8,
+          a: 0.25 + Math.random() * 0.55,
+        });
+      }
+    }
+
+    function clampDestination(ship, point) {
+      const dx = point.x - ship.x;
+      const dy = point.y - ship.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance <= ship.moveRange) return point;
+      const ratio = ship.moveRange / distance;
+      return {
+        x: ship.x + dx * ratio,
+        y: ship.y + dy * ratio,
+      };
+    }
+
+    function clampFireTarget(ship, point) {
+      const dx = point.x - ship.x;
+      const dy = point.y - ship.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance <= ship.shotRange) return point;
+      const ratio = ship.shotRange / distance;
+      return {
+        x: ship.x + dx * ratio,
+        y: ship.y + dy * ratio,
+      };
+    }
+
+    function getShipAt(x, y) {
+      return ships.find((ship) => ship.alive && Math.hypot(x - ship.x, y - ship.y) <= 16) || null;
+    }
+
+    function getSelectedShip() {
+      return ships.find((ship) => ship.alive && ship.id === state.selectedShipId) || null;
+    }
+
+    function getAliveShips() {
+      return ships.filter((ship) => ship.alive);
+    }
+
+    function getPlanningShips(player) {
+      return getAliveShips().filter((ship) => ship.player === player);
+    }
+
+    function canControlShip(ship) {
+      return ship && ship.alive && ship.player === state.currentPlanningPlayer && !state.animating;
+    }
+
+    function updateTurnStatus() {
+      const turnStatus = document.getElementById('turnStatus');
+      const executeButton = document.getElementById('executeTurn');
+      const finishButton = document.getElementById('finishPlanning');
+      const bothReady = state.planningDone[1] && state.planningDone[2];
+      const current = state.currentPlanningPlayer;
+      const teamLabel = current === 1 ? 'Jogador 1 (Azul)' : 'Jogador 2 (Vermelho)';
+      const aliveCount = getPlanningShips(current).length;
+      turnStatus.textContent = bothReady
+        ? 'Planejamento concluído para os dois jogadores. Pode executar o turno.'
+        : `Vez de planejamento: ${teamLabel} - naves ativas: ${aliveCount}.`;
+      turnStatus.className = `hint ${bothReady ? 'turn-ready' : current === 1 ? 'turn-p1' : 'turn-p2'}`;
+      executeButton.disabled = !bothReady || state.animating;
+      finishButton.disabled = bothReady || state.animating;
+    }
+
+    function addImpactEffect(x, y) {
+      state.impactEffects.push({
+        x,
+        y,
+        startedAt: performance.now(),
+        duration: 240,
+      });
+    }
+
+    function addDestructionEffect(x, y) {
+      state.destructionEffects.push({
+        x,
+        y,
+        startedAt: performance.now(),
+        duration: 420,
+      });
+    }
+
+    function updateVisualEffects(now) {
+      state.impactEffects = state.impactEffects.filter((effect) => (now - effect.startedAt) < effect.duration);
+      state.destructionEffects = state.destructionEffects.filter((effect) => (now - effect.startedAt) < effect.duration);
+      return state.impactEffects.length > 0 || state.destructionEffects.length > 0;
+    }
+
+    function drawBackground() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#070d1f');
+      grad.addColorStop(1, '#030611');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      for (const star of stars) {
+        ctx.fillStyle = `rgba(210, 230, 255, ${star.a})`;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawRange(ship) {
+      ctx.strokeStyle = 'rgba(139, 255, 207, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.arc(ship.x, ship.y, ship.moveRange, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawShip(ship, selected) {
+      const now = performance.now();
+      const size = ship.size || 14;
+      const p1 = { x: ship.x, y: ship.y - size };
+      const p2 = { x: ship.x - size * 0.75, y: ship.y + size * 0.75 };
+      const p3 = { x: ship.x + size * 0.75, y: ship.y + size * 0.75 };
+      const hitFlashOn = ship.hitFlashUntil > now && Math.floor(now / 55) % 2 === 0;
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.closePath();
+      ctx.fillStyle = hitFlashOn ? '#ffffff' : ship.color;
+      ctx.fill();
+
+      ctx.lineWidth = selected ? 2.5 : 1;
+      ctx.strokeStyle = selected ? '#ffffff' : 'rgba(230, 240, 255, 0.5)';
+      ctx.stroke();
+
+      const hpRatio = Math.max(0, ship.hp) / ship.maxHp;
+      const barWidth = 28;
+      const barX = ship.x - barWidth / 2;
+      const barY = ship.y - 22;
+      ctx.fillStyle = 'rgba(15, 25, 45, 0.9)';
+      ctx.fillRect(barX, barY, barWidth, 4);
+      ctx.fillStyle = hpRatio > 0.5 ? '#70e070' : hpRatio > 0.25 ? '#ffd46a' : '#ff6b6b';
+      ctx.fillRect(barX, barY, barWidth * hpRatio, 4);
+    }
+
+    function drawImpactEffects(now) {
+      for (const effect of state.impactEffects) {
+        const t = Math.min(1, (now - effect.startedAt) / effect.duration);
+        const radius = 4 + (22 * t);
+        const alpha = 1 - t;
+        ctx.strokeStyle = `rgba(255, 230, 180, ${Math.max(0.1, alpha).toFixed(2)})`;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    function drawDestructionEffects(now) {
+      for (const effect of state.destructionEffects) {
+        const t = Math.min(1, (now - effect.startedAt) / effect.duration);
+        const alpha = 1 - t;
+        const radius = 8 + (24 * t);
+        ctx.fillStyle = `rgba(255, 140, 90, ${(0.55 * alpha).toFixed(2)})`;
+        ctx.beginPath();
+        ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(255, 220, 160, ${(0.9 * alpha).toFixed(2)})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(effect.x, effect.y, radius + 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    function drawDestination(ship) {
+      if (!ship.destination) return;
+      ctx.strokeStyle = 'rgba(88, 166, 255, 0.9)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y);
+      ctx.lineTo(ship.destination.x, ship.destination.y);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(88, 166, 255, 0.95)';
+      ctx.beginPath();
+      ctx.arc(ship.destination.x, ship.destination.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawFireDirection(ship) {
+      if (!ship.fireTarget) return;
+      ctx.strokeStyle = 'rgba(255, 140, 140, 0.30)';
+      ctx.lineWidth = 4.2;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y);
+      ctx.lineTo(ship.fireTarget.x, ship.fireTarget.y);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255, 125, 125, 0.95)';
+      ctx.lineWidth = 2.1;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y);
+      ctx.lineTo(ship.fireTarget.x, ship.fireTarget.y);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 140, 140, 1)';
+      ctx.beginPath();
+      ctx.arc(ship.fireTarget.x, ship.fireTarget.y, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawDragPreview(ship) {
+      if (!state.dragging || !state.dragPoint || state.selectedShipId !== ship.id) return;
+      const isFire = state.dragType === 'fire';
+      if (isFire) {
+        ctx.strokeStyle = 'rgba(255, 130, 130, 0.35)';
+        ctx.lineWidth = 4.5;
+        ctx.beginPath();
+        ctx.moveTo(ship.x, ship.y);
+        ctx.lineTo(state.dragPoint.x, state.dragPoint.y);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = isFire ? 'rgba(255, 125, 125, 0.95)' : 'rgba(255, 138, 138, 0.95)';
+      ctx.lineWidth = isFire ? 2.1 : 1;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y);
+      ctx.lineTo(state.dragPoint.x, state.dragPoint.y);
+      ctx.stroke();
+
+      ctx.fillStyle = isFire ? 'rgba(255, 118, 118, 0.95)' : 'rgba(255, 138, 138, 0.95)';
+      ctx.beginPath();
+      ctx.arc(state.dragPoint.x, state.dragPoint.y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawProjectiles() {
+      for (const projectile of state.projectiles) {
+        if (!projectile.alive) continue;
+        const trailLen = 14;
+        ctx.strokeStyle = 'rgba(255, 120, 120, 0.42)';
+        ctx.lineWidth = 2.3;
+        ctx.beginPath();
+        ctx.moveTo(projectile.x - projectile.dirX * trailLen, projectile.y - projectile.dirY * trailLen);
+        ctx.lineTo(projectile.x, projectile.y);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ff5a5a';
+        ctx.beginPath();
+        ctx.arc(projectile.x, projectile.y, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function draw() {
+      const now = performance.now();
+      updateVisualEffects(now);
+      drawBackground();
+
+      const selectedShip = getSelectedShip();
+      if (!selectedShip && state.selectedShipId !== null) {
+        state.selectedShipId = null;
+      }
+      if (selectedShip) drawRange(selectedShip);
+
+      for (const ship of getAliveShips()) {
+        drawDestination(ship);
+        drawFireDirection(ship);
+      }
+
+      if (selectedShip) drawDragPreview(selectedShip);
+
+      drawProjectiles();
+      drawImpactEffects(now);
+      drawDestructionEffects(now);
+
+      for (const ship of getAliveShips()) {
+        drawShip(ship, selectedShip && selectedShip.id === ship.id);
+      }
+
+      renderLegend();
+    }
+
+    function toCanvasPoint(event) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      };
+    }
+
+    function easeInOutCubic(t) {
+      if (t < 0.5) return 4 * t * t * t;
+      return 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function executeTurn() {
+      if (state.animating) return;
+      if (!(state.planningDone[1] && state.planningDone[2])) return;
+
+      const movingShips = getAliveShips()
+        .filter((ship) => ship.destination)
+        .map((ship) => {
+          const target = { ...ship.destination };
+          const distance = Math.hypot(target.x - ship.x, target.y - ship.y);
+          return {
+            ship,
+            startX: ship.x,
+            startY: ship.y,
+            endX: target.x,
+            endY: target.y,
+            duration: Math.max(460, Math.min(2900, (distance * 6.9) / ship.speed)),
+          };
+        });
+
+      const shootingShips = getAliveShips()
+        .filter((ship) => ship.fireTarget)
+        .map((ship) => {
+          const dx = ship.fireTarget.x - ship.x;
+          const dy = ship.fireTarget.y - ship.y;
+          const distance = Math.hypot(dx, dy) || 1;
+          return {
+            ship,
+            startX: ship.x,
+            startY: ship.y,
+            dirX: dx / distance,
+            dirY: dy / distance,
+            damage: ship.damage,
+          };
+        });
+
+      if (movingShips.length === 0 && shootingShips.length === 0) return;
+
+      state.animating = true;
+      state.dragging = false;
+      state.dragPoint = null;
+      updateTurnStatus();
+      state.projectiles = shootingShips.map((shot) => ({
+        ship: shot.ship,
+        ownerShipId: shot.ship.id,
+        x: shot.startX,
+        y: shot.startY,
+        dirX: shot.dirX,
+        dirY: shot.dirY,
+        damage: shot.damage,
+        alive: true,
+      }));
+
+      const startedAt = performance.now();
+      let lastNow = startedAt;
+
+      function tick(now) {
+        const elapsed = now - startedAt;
+        const dt = now - lastNow;
+        lastNow = now;
+        let anyShipMoving = false;
+        let anyProjectileAlive = false;
+
+        for (const movement of movingShips) {
+          const t = Math.min(1, elapsed / movement.duration);
+          const eased = easeInOutCubic(t);
+          movement.ship.x = movement.startX + (movement.endX - movement.startX) * eased;
+          movement.ship.y = movement.startY + (movement.endY - movement.startY) * eased;
+          if (t < 1) anyShipMoving = true;
+        }
+
+        for (const projectile of state.projectiles) {
+          if (!projectile.alive) continue;
+          const step = SHOT_SPEED * dt;
+          projectile.x += projectile.dirX * step;
+          projectile.y += projectile.dirY * step;
+
+          const outMargin = 8;
+          const w = canvas.clientWidth;
+          const h = canvas.clientHeight;
+          if (
+            projectile.x < -outMargin ||
+            projectile.y < -outMargin ||
+            projectile.x > w + outMargin ||
+            projectile.y > h + outMargin
+          ) {
+            projectile.alive = false;
+            continue;
+          }
+
+          for (const target of getAliveShips()) {
+            if (target.id === projectile.ownerShipId) continue;
+            if (Math.hypot(projectile.x - target.x, projectile.y - target.y) <= HIT_RADIUS) {
+              addImpactEffect(projectile.x, projectile.y);
+              target.hp = Math.max(0, target.hp - projectile.damage);
+              target.hitFlashUntil = performance.now() + 180;
+              if (target.hp === 0) {
+                addDestructionEffect(target.x, target.y);
+                target.alive = false;
+                target.destination = null;
+                target.fireTarget = null;
+                if (state.selectedShipId === target.id) {
+                  state.selectedShipId = null;
+                }
+              }
+              projectile.alive = false;
+              break;
+            }
+          }
+          if (!projectile.alive) continue;
+          anyProjectileAlive = true;
+        }
+
+        const anyVisualEffects = updateVisualEffects(now);
+        draw();
+
+        if (anyShipMoving || anyProjectileAlive || anyVisualEffects) {
+          state.animationFrameId = requestAnimationFrame(tick);
+          return;
+        }
+
+        for (const movement of movingShips) {
+          movement.ship.x = movement.endX;
+          movement.ship.y = movement.endY;
+          movement.ship.destination = null;
+        }
+        for (const ship of getAliveShips()) {
+          ship.fireTarget = null;
+        }
+
+        state.animating = false;
+        state.animationFrameId = null;
+        state.projectiles = [];
+        state.planningDone[1] = false;
+        state.planningDone[2] = false;
+        state.currentPlanningPlayer = 1;
+        state.selectedShipId = null;
+        updateTurnStatus();
+        draw();
+      }
+
+      state.animationFrameId = requestAnimationFrame(tick);
+    }
+
+    canvas.addEventListener('mousedown', (event) => {
+      if (state.animating) return;
+      if (state.planningDone[state.currentPlanningPlayer]) return;
+      const point = toCanvasPoint(event);
+      const clickedShip = getShipAt(point.x, point.y);
+      if (clickedShip && canControlShip(clickedShip)) {
+        state.selectedShipId = clickedShip.id;
+        state.dragging = true;
+        state.dragType = state.mode;
+        state.dragPoint = { x: clickedShip.x, y: clickedShip.y };
+        draw();
+        return;
+      }
+
+      state.selectedShipId = null;
+      state.dragging = false;
+      state.dragPoint = null;
+      draw();
+    });
+
+    canvas.addEventListener('mousemove', (event) => {
+      if (state.animating) return;
+      if (!state.dragging) return;
+      const selectedShip = getSelectedShip();
+      if (!canControlShip(selectedShip)) return;
+      const point = toCanvasPoint(event);
+      state.dragPoint = state.dragType === 'fire'
+        ? clampFireTarget(selectedShip, point)
+        : clampDestination(selectedShip, point);
+      draw();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (state.animating) return;
+      if (!state.dragging) return;
+      const selectedShip = getSelectedShip();
+      if (canControlShip(selectedShip) && state.dragPoint) {
+        if (state.dragType === 'fire') {
+          selectedShip.fireTarget = { ...state.dragPoint };
+        } else {
+          selectedShip.destination = { ...state.dragPoint };
+        }
+      }
+      state.dragging = false;
+      state.dragPoint = null;
+      draw();
+    });
+
+    document.getElementById('modeMove').addEventListener('click', () => {
+      if (state.animating) return;
+      state.mode = 'move';
+      document.getElementById('modeMove').classList.add('active');
+      document.getElementById('modeFire').classList.remove('active');
+    });
+
+    document.getElementById('modeFire').addEventListener('click', () => {
+      if (state.animating) return;
+      state.mode = 'fire';
+      document.getElementById('modeFire').classList.add('active');
+      document.getElementById('modeMove').classList.remove('active');
+    });
+
+    document.getElementById('finishPlanning').addEventListener('click', () => {
+      if (state.animating) return;
+      if (state.planningDone[state.currentPlanningPlayer]) return;
+      state.planningDone[state.currentPlanningPlayer] = true;
+      state.selectedShipId = null;
+      state.dragging = false;
+      state.dragPoint = null;
+
+      if (!state.planningDone[2]) {
+        state.currentPlanningPlayer = 2;
+      }
+
+      updateTurnStatus();
+      draw();
+    });
+
+    document.getElementById('executeTurn').addEventListener('click', () => {
+      executeTurn();
+    });
+
+    document.getElementById('clearDestinations').addEventListener('click', () => {
+      if (state.animating) return;
+      for (const ship of getAliveShips()) {
+        ship.destination = null;
+        ship.fireTarget = null;
+      }
+      if (!state.animating) {
+        state.selectedShipId = null;
+      }
+      draw();
+    });
+
+    function renderLegend() {
+      const legend = document.getElementById('legend');
+      legend.innerHTML = ships.map((ship) => `
+        <div class="legend-item">
+          <span class="swatch" style="background:${ship.color}"></span>
+          <strong>${ship.name}</strong><br>
+          Time: <strong>Jogador ${ship.player}</strong><br>
+          Classe: <strong>${ship.type}</strong><br>
+          Alcance de movimento: <strong>${ship.moveRange}px</strong><br>
+          Alcance de tiro: <strong>${ship.shotRange}px</strong><br>
+          Velocidade: <strong>${ship.speed.toFixed(2)}x</strong><br>
+          Dano por tiro: <strong>${ship.damage}</strong><br>
+          Vida: <strong>${ship.alive ? `${ship.hp} HP` : 'Destruída'}</strong>
+        </div>
+      `).join('');
+    }
+
+    updateTurnStatus();
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+  </script>
+</body>
+</html>
