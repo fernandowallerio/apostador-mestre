@@ -205,7 +205,7 @@
       destructionEffects: [],
     };
 
-    const SHOT_SPEED = 0.6; // px/ms
+    const SHOT_SPEED = 0.34; // px/ms (ritmo mais tático)
     const HIT_RADIUS = 13;
 
     function resizeCanvas() {
@@ -377,10 +377,10 @@
     function drawImpactEffects(now) {
       for (const effect of state.impactEffects) {
         const t = Math.min(1, (now - effect.startedAt) / effect.duration);
-        const radius = 4 + (18 * t);
+        const radius = 4 + (22 * t);
         const alpha = 1 - t;
-        ctx.strokeStyle = `rgba(255, 215, 160, ${Math.max(0.1, alpha).toFixed(2)})`;
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = `rgba(255, 230, 180, ${Math.max(0.1, alpha).toFixed(2)})`;
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
         ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
         ctx.stroke();
@@ -421,24 +421,39 @@
 
     function drawFireDirection(ship) {
       if (!ship.fireTarget) return;
-      ctx.strokeStyle = 'rgba(255, 118, 118, 0.95)';
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(255, 140, 140, 0.30)';
+      ctx.lineWidth = 4.2;
       ctx.beginPath();
       ctx.moveTo(ship.x, ship.y);
       ctx.lineTo(ship.fireTarget.x, ship.fireTarget.y);
       ctx.stroke();
 
-      ctx.fillStyle = 'rgba(255, 118, 118, 1)';
+      ctx.strokeStyle = 'rgba(255, 125, 125, 0.95)';
+      ctx.lineWidth = 2.1;
       ctx.beginPath();
-      ctx.arc(ship.fireTarget.x, ship.fireTarget.y, 3.5, 0, Math.PI * 2);
+      ctx.moveTo(ship.x, ship.y);
+      ctx.lineTo(ship.fireTarget.x, ship.fireTarget.y);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 140, 140, 1)';
+      ctx.beginPath();
+      ctx.arc(ship.fireTarget.x, ship.fireTarget.y, 4.2, 0, Math.PI * 2);
       ctx.fill();
     }
 
     function drawDragPreview(ship) {
       if (!state.dragging || !state.dragPoint || state.selectedShipId !== ship.id) return;
       const isFire = state.dragType === 'fire';
-      ctx.strokeStyle = isFire ? 'rgba(255, 118, 118, 0.95)' : 'rgba(255, 138, 138, 0.95)';
-      ctx.lineWidth = 1;
+      if (isFire) {
+        ctx.strokeStyle = 'rgba(255, 130, 130, 0.35)';
+        ctx.lineWidth = 4.5;
+        ctx.beginPath();
+        ctx.moveTo(ship.x, ship.y);
+        ctx.lineTo(state.dragPoint.x, state.dragPoint.y);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = isFire ? 'rgba(255, 125, 125, 0.95)' : 'rgba(255, 138, 138, 0.95)';
+      ctx.lineWidth = isFire ? 2.1 : 1;
       ctx.beginPath();
       ctx.moveTo(ship.x, ship.y);
       ctx.lineTo(state.dragPoint.x, state.dragPoint.y);
@@ -453,9 +468,17 @@
     function drawProjectiles() {
       for (const projectile of state.projectiles) {
         if (!projectile.alive) continue;
+        const trailLen = 14;
+        ctx.strokeStyle = 'rgba(255, 120, 120, 0.42)';
+        ctx.lineWidth = 2.3;
+        ctx.beginPath();
+        ctx.moveTo(projectile.x - projectile.dirX * trailLen, projectile.y - projectile.dirY * trailLen);
+        ctx.lineTo(projectile.x, projectile.y);
+        ctx.stroke();
+
         ctx.fillStyle = '#ff5a5a';
         ctx.beginPath();
-        ctx.arc(projectile.x, projectile.y, 2.6, 0, Math.PI * 2);
+        ctx.arc(projectile.x, projectile.y, 2.8, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -517,7 +540,7 @@
             startY: ship.y,
             endX: target.x,
             endY: target.y,
-            duration: Math.max(280, Math.min(1700, (distance * 4.2) / ship.speed)),
+            duration: Math.max(420, Math.min(2600, (distance * 6.4) / ship.speed)),
           };
         });
 
