@@ -323,23 +323,6 @@
       }
     }
 
-    function renderLegend() {
-      const legend = document.getElementById('legend');
-      legend.innerHTML = ships.map((ship) => `
-        <div class="legend-item">
-          <span class="swatch" style="background:${ship.color}"></span>
-          <strong>${ship.name}</strong><br>
-          Time: <strong>Jogador ${ship.player}</strong><br>
-          Classe: <strong>${ship.type}</strong><br>
-          Alcance de movimento: <strong>${ship.moveRange}px</strong><br>
-          Alcance de tiro: <strong>${ship.shotRange}px</strong><br>
-          Velocidade: <strong>${ship.speed.toFixed(2)}x</strong><br>
-          Dano por tiro: <strong>${ship.damage}</strong><br>
-          Vida: <strong>${ship.alive ? `${ship.hp} HP` : 'Destruída'}</strong>
-        </div>
-      `).join('');
-    }
-
     function draw() {
       const now = performance.now();
       updateVisualEffects(now);
@@ -366,8 +349,6 @@
       for (const ship of getAliveShips()) {
         drawShip(ship, selectedShip && selectedShip.id === ship.id);
       }
-
-      renderLegend();
     }
 
     function toCanvasPoint(event) {
