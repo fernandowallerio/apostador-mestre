@@ -2,26 +2,32 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Batalha Espacial – Protótipo</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="top-bar">
     <div>
       <strong>Protótipo: Batalha Espacial</strong>
+      <div class="hint">Jogador 1 planeja, depois Jogador 2. Após ambos finalizarem, execute o turno simultâneo.</div>
       <div class="hint" id="turnStatus"></div>
     </div>
+
     <div class="controls">
-      <button id="modeMove" class="active">Modo: Movimento</button>
-      <button id="modeFire">Modo: Tiro</button>
-      <button id="finishPlanning">Finalizar planejamento</button>
-      <button id="executeTurn">Executar turno</button>
-      <button id="clearDestinations">Limpar destinos</button>
+      <a class="link-btn" href="../../index.html">Voltar ao site</a>
+      <button id="modeMove" type="button" class="active">Modo: Movimento</button>
+      <button id="modeFire" type="button">Modo: Tiro</button>
+      <button id="finishPlanning" type="button">Finalizar planejamento</button>
+      <button id="executeTurn" type="button">Executar turno</button>
+      <button id="clearDestinations" type="button">Limpar destinos</button>
     </div>
   </div>
+
   <div class="arena-wrap">
-    <canvas id="spaceCanvas"></canvas>
+    <canvas id="spaceCanvas" aria-label="Área de batalha espacial"></canvas>
   </div>
+
   <div class="legend" id="legend"></div>
 
   <script src="../game/engine.js"></script>
