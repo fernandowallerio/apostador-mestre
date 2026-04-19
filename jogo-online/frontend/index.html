@@ -1,1 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Batalha Espacial – Online</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="top-bar">
+    <div>
+      <strong>Batalha Espacial</strong>
+      <div class="hint" id="turnStatus">Aguardando planos...</div>
+    </div>
+    <div class="controls">
+      <button id="modeMove" class="active">Movimento</button>
+      <button id="modeFire">Tiro</button>
+      <button id="finishPlanning">Finalizar plano</button>
+      <button id="executeTurn">Executar turno</button>
+    </div>
+  </div>
 
+  <div class="arena-wrap">
+    <canvas id="spaceCanvas"></canvas>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <script src="../game/engine.js"></script>
+  
+  <script src="ui.js"></script>
+</body>
+</html>
