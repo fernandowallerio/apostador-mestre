@@ -124,7 +124,7 @@
   <div class="top-bar">
     <div>
       <strong>Protótipo: Batalha Espacial</strong>
-      <div class="hint">Escolha o modo (movimento/tiro), arraste a partir da nave para planejar e use “Executar turno”.</div>
+      <div class="hint">Planeje movimento/tiro e execute o turno: projéteis causam dano e naves com 0 HP são destruídas.</div>
     </div>
     <div class="controls">
       <a class="link-btn" href="index.html">Voltar ao site</a>
@@ -147,9 +147,9 @@
 
     const stars = [];
     const ships = [
-      { id: 1, name: 'Interceptor', x: 180, y: 180, range: 110, color: '#58a6ff', destination: null, fireTarget: null },
-      { id: 2, name: 'Fragata', x: 390, y: 260, range: 160, color: '#8bffcf', destination: null, fireTarget: null },
-      { id: 3, name: 'Cruzador', x: 650, y: 180, range: 220, color: '#ffd580', destination: null, fireTarget: null },
+      { id: 1, name: 'Interceptor', x: 180, y: 180, range: 110, color: '#58a6ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
+      { id: 2, name: 'Fragata', x: 390, y: 260, range: 160, color: '#8bffcf', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
+      { id: 3, name: 'Cruzador', x: 650, y: 180, range: 220, color: '#ffd580', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
     ];
 
     const state = {
@@ -165,6 +165,8 @@
 
     const SHOT_MAX_DISTANCE = 280;
     const SHOT_SPEED = 0.6; // px/ms
+    const SHOT_DAMAGE = 25;
+    const HIT_RADIUS = 13;
 
     function resizeCanvas() {
       const rect = canvas.getBoundingClientRect();
@@ -216,11 +218,15 @@
     }
 
     function getShipAt(x, y) {
-      return ships.find((ship) => Math.hypot(x - ship.x, y - ship.y) <= 16) || null;
+      return ships.find((ship) => ship.alive && Math.hypot(x - ship.x, y - ship.y) <= 16) || null;
     }
 
     function getSelectedShip() {
-      return ships.find((ship) => ship.id === state.selectedShipId) || null;
+      return ships.find((ship) => ship.alive && ship.id === state.selectedShipId) || null;
+    }
+
+    function getAliveShips() {
+      return ships.filter((ship) => ship.alive);
     }
 
     function drawBackground() {
@@ -267,6 +273,15 @@
       ctx.lineWidth = selected ? 2.5 : 1;
       ctx.strokeStyle = selected ? '#ffffff' : 'rgba(230, 240, 255, 0.5)';
       ctx.stroke();
+
+      const hpRatio = Math.max(0, ship.hp) / ship.maxHp;
+      const barWidth = 28;
+      const barX = ship.x - barWidth / 2;
+      const barY = ship.y - 22;
+      ctx.fillStyle = 'rgba(15, 25, 45, 0.9)';
+      ctx.fillRect(barX, barY, barWidth, 4);
+      ctx.fillStyle = hpRatio > 0.5 ? '#70e070' : hpRatio > 0.25 ? '#ffd46a' : '#ff6b6b';
+      ctx.fillRect(barX, barY, barWidth * hpRatio, 4);
     }
 
     function drawDestination(ship) {
@@ -329,9 +344,12 @@
       drawBackground();
 
       const selectedShip = getSelectedShip();
+      if (!selectedShip && state.selectedShipId !== null) {
+        state.selectedShipId = null;
+      }
       if (selectedShip) drawRange(selectedShip);
 
-      for (const ship of ships) {
+      for (const ship of getAliveShips()) {
         drawDestination(ship);
         drawFireDirection(ship);
       }
@@ -340,9 +358,11 @@
 
       drawProjectiles();
 
-      for (const ship of ships) {
+      for (const ship of getAliveShips()) {
         drawShip(ship, selectedShip && selectedShip.id === ship.id);
       }
+
+      renderLegend();
     }
 
     function toCanvasPoint(event) {
@@ -361,7 +381,7 @@
     function executeTurn() {
       if (state.animating) return;
 
-      const movingShips = ships
+      const movingShips = getAliveShips()
         .filter((ship) => ship.destination)
         .map((ship) => {
           const target = { ...ship.destination };
@@ -376,7 +396,7 @@
           };
         });
 
-      const shootingShips = ships
+      const shootingShips = getAliveShips()
         .filter((ship) => ship.fireTarget)
         .map((ship) => {
           const dx = ship.fireTarget.x - ship.x;
@@ -399,6 +419,7 @@
       state.dragPoint = null;
       state.projectiles = shootingShips.map((shot) => ({
         ship: shot.ship,
+        ownerShipId: shot.ship.id,
         x: shot.startX,
         y: shot.startY,
         dirX: shot.dirX,
@@ -436,6 +457,24 @@
           }
           projectile.x += projectile.dirX * step;
           projectile.y += projectile.dirY * step;
+
+          for (const target of getAliveShips()) {
+            if (target.id === projectile.ownerShipId) continue;
+            if (Math.hypot(projectile.x - target.x, projectile.y - target.y) <= HIT_RADIUS) {
+              target.hp = Math.max(0, target.hp - SHOT_DAMAGE);
+              if (target.hp === 0) {
+                target.alive = false;
+                target.destination = null;
+                target.fireTarget = null;
+                if (state.selectedShipId === target.id) {
+                  state.selectedShipId = null;
+                }
+              }
+              projectile.alive = false;
+              break;
+            }
+          }
+          if (!projectile.alive) continue;
           anyProjectileAlive = true;
         }
 
@@ -451,7 +490,7 @@
           movement.ship.y = movement.endY;
           movement.ship.destination = null;
         }
-        for (const ship of ships) {
+        for (const ship of getAliveShips()) {
           ship.fireTarget = null;
         }
 
@@ -531,7 +570,7 @@
 
     document.getElementById('clearDestinations').addEventListener('click', () => {
       if (state.animating) return;
-      for (const ship of ships) {
+      for (const ship of getAliveShips()) {
         ship.destination = null;
         ship.fireTarget = null;
       }
@@ -544,12 +583,12 @@
         <div class="legend-item">
           <span class="swatch" style="background:${ship.color}"></span>
           <strong>${ship.name}</strong><br>
-          Alcance de movimento: <strong>${ship.range}px</strong>
+          Alcance de movimento: <strong>${ship.range}px</strong><br>
+          Vida: <strong>${ship.alive ? `${ship.hp} HP` : 'Destruída'}</strong>
         </div>
       `).join('');
     }
 
-    renderLegend();
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
   </script>
