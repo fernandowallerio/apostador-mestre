@@ -1,3 +1,5 @@
+(() => {
+  function createGame() {
     const canvas = document.getElementById('spaceCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -9,6 +11,7 @@
       { id: 4, player: 1, type: 'Sniper', name: 'P1 Sniper', x: 180, y: 360, moveRange: 120, shotRange: 600, speed: 0.85, damage: 50, size: 12, color: '#74b7ff', destination: null, fireTarget: null, hp: 70, maxHp: 70, alive: true, hitFlashUntil: 0 },
       { id: 5, player: 1, type: 'Artilharia', name: 'P1 Artilharia', x: 320, y: 300, moveRange: 90, shotRange: 450, speed: 0.6, damage: 60, size: 19, color: '#9ad7ff', destination: null, fireTarget: null, hp: 150, maxHp: 150, alive: true, hitFlashUntil: 0 },
       { id: 6, player: 1, type: 'Rastreadora', name: 'P1 Rastreadora', x: 380, y: 230, moveRange: 120, shotRange: 420, speed: 0.9, damage: 35, size: 13, color: '#8ec8ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
+
       { id: 7, player: 2, type: 'Interceptor', name: 'P2 Interceptor', x: 860, y: 140, moveRange: 180, shotRange: 420, speed: 1.25, damage: 15, size: 11, color: '#ff8a8a', destination: null, fireTarget: null, hp: 80, maxHp: 80, alive: true, hitFlashUntil: 0 },
       { id: 8, player: 2, type: 'Fragata', name: 'P2 Fragata', x: 770, y: 240, moveRange: 150, shotRange: 360, speed: 1.0, damage: 25, size: 14, color: '#ff9f9f', destination: null, fireTarget: null, hp: 120, maxHp: 120, alive: true, hitFlashUntil: 0 },
       { id: 9, player: 2, type: 'Cruzador', name: 'P2 Cruzador', x: 680, y: 120, moveRange: 110, shotRange: 340, speed: 0.8, damage: 40, size: 18, color: '#ffb3b3', destination: null, fireTarget: null, hp: 180, maxHp: 180, alive: true, hitFlashUntil: 0 },
@@ -32,7 +35,7 @@
       destructionEffects: [],
     };
 
-    const SHOT_SPEED = 0.272; // px/ms (aprox. 20% mais lento)
+    const SHOT_SPEED = 0.272;
     const HIT_RADIUS = 13;
 
     function resizeCanvas() {
@@ -112,9 +115,11 @@
       const current = state.currentPlanningPlayer;
       const teamLabel = current === 1 ? 'Jogador 1 (Azul)' : 'Jogador 2 (Vermelho)';
       const aliveCount = getPlanningShips(current).length;
+
       turnStatus.textContent = bothReady
         ? 'Planejamento concluído para os dois jogadores. Pode executar o turno.'
         : `Vez de planejamento: ${teamLabel} - naves ativas: ${aliveCount}.`;
+
       turnStatus.className = `hint ${bothReady ? 'turn-ready' : current === 1 ? 'turn-p1' : 'turn-p2'}`;
       executeButton.disabled = !bothReady || state.animating;
       finishButton.disabled = bothReady || state.animating;
@@ -219,10 +224,12 @@
         const t = Math.min(1, (now - effect.startedAt) / effect.duration);
         const alpha = 1 - t;
         const radius = 8 + (24 * t);
+
         ctx.fillStyle = `rgba(255, 140, 90, ${(0.55 * alpha).toFixed(2)})`;
         ctx.beginPath();
         ctx.arc(effect.x, effect.y, radius, 0, Math.PI * 2);
         ctx.fill();
+
         ctx.strokeStyle = `rgba(255, 220, 160, ${(0.9 * alpha).toFixed(2)})`;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
@@ -233,6 +240,7 @@
 
     function drawDestination(ship) {
       if (!ship.destination) return;
+
       ctx.strokeStyle = 'rgba(88, 166, 255, 0.9)';
       ctx.lineWidth = 1.2;
       ctx.beginPath();
@@ -248,6 +256,7 @@
 
     function drawFireDirection(ship) {
       if (!ship.fireTarget) return;
+
       ctx.strokeStyle = 'rgba(255, 140, 140, 0.30)';
       ctx.lineWidth = 4.2;
       ctx.beginPath();
@@ -270,7 +279,9 @@
 
     function drawDragPreview(ship) {
       if (!state.dragging || !state.dragPoint || state.selectedShipId !== ship.id) return;
+
       const isFire = state.dragType === 'fire';
+
       if (isFire) {
         ctx.strokeStyle = 'rgba(255, 130, 130, 0.35)';
         ctx.lineWidth = 4.5;
@@ -279,6 +290,7 @@
         ctx.lineTo(state.dragPoint.x, state.dragPoint.y);
         ctx.stroke();
       }
+
       ctx.strokeStyle = isFire ? 'rgba(255, 125, 125, 0.95)' : 'rgba(255, 138, 138, 0.95)';
       ctx.lineWidth = isFire ? 2.1 : 1;
       ctx.beginPath();
@@ -295,6 +307,7 @@
     function drawProjectiles() {
       for (const projectile of state.projectiles) {
         if (!projectile.alive) continue;
+
         const trailLen = 14;
         ctx.strokeStyle = 'rgba(255, 120, 120, 0.42)';
         ctx.lineWidth = 2.3;
@@ -319,6 +332,7 @@
       if (!selectedShip && state.selectedShipId !== null) {
         state.selectedShipId = null;
       }
+
       if (selectedShip) drawRange(selectedShip);
 
       for (const ship of getAliveShips()) {
@@ -335,8 +349,6 @@
       for (const ship of getAliveShips()) {
         drawShip(ship, selectedShip && selectedShip.id === ship.id);
       }
-
-      renderLegend();
     }
 
     function toCanvasPoint(event) {
@@ -393,6 +405,7 @@
       state.dragging = false;
       state.dragPoint = null;
       updateTurnStatus();
+
       state.projectiles = shootingShips.map((shot) => ({
         ship: shot.ship,
         ownerShipId: shot.ship.id,
@@ -424,6 +437,7 @@
 
         for (const projectile of state.projectiles) {
           if (!projectile.alive) continue;
+
           const step = SHOT_SPEED * dt;
           projectile.x += projectile.dirX * step;
           projectile.y += projectile.dirY * step;
@@ -431,6 +445,7 @@
           const outMargin = 8;
           const w = canvas.clientWidth;
           const h = canvas.clientHeight;
+
           if (
             projectile.x < -outMargin ||
             projectile.y < -outMargin ||
@@ -443,10 +458,12 @@
 
           for (const target of getAliveShips()) {
             if (target.id === projectile.ownerShipId) continue;
+
             if (Math.hypot(projectile.x - target.x, projectile.y - target.y) <= HIT_RADIUS) {
               addImpactEffect(projectile.x, projectile.y);
               target.hp = Math.max(0, target.hp - projectile.damage);
               target.hitFlashUntil = performance.now() + 180;
+
               if (target.hp === 0) {
                 addDestructionEffect(target.x, target.y);
                 target.alive = false;
@@ -456,10 +473,12 @@
                   state.selectedShipId = null;
                 }
               }
+
               projectile.alive = false;
               break;
             }
           }
+
           if (!projectile.alive) continue;
           anyProjectileAlive = true;
         }
@@ -477,6 +496,7 @@
           movement.ship.y = movement.endY;
           movement.ship.destination = null;
         }
+
         for (const ship of getAliveShips()) {
           ship.fireTarget = null;
         }
@@ -495,117 +515,124 @@
       state.animationFrameId = requestAnimationFrame(tick);
     }
 
-    canvas.addEventListener('mousedown', (event) => {
-      if (state.animating) return;
-      if (state.planningDone[state.currentPlanningPlayer]) return;
-      const point = toCanvasPoint(event);
-      const clickedShip = getShipAt(point.x, point.y);
-      if (clickedShip && canControlShip(clickedShip)) {
-        state.selectedShipId = clickedShip.id;
-        state.dragging = true;
-        state.dragType = state.mode;
-        state.dragPoint = { x: clickedShip.x, y: clickedShip.y };
-        draw();
-        return;
-      }
+    function bindEvents() {
+      canvas.addEventListener('mousedown', (event) => {
+        if (state.animating) return;
+        if (state.planningDone[state.currentPlanningPlayer]) return;
 
-      state.selectedShipId = null;
-      state.dragging = false;
-      state.dragPoint = null;
-      draw();
-    });
+        const point = toCanvasPoint(event);
+        const clickedShip = getShipAt(point.x, point.y);
 
-    canvas.addEventListener('mousemove', (event) => {
-      if (state.animating) return;
-      if (!state.dragging) return;
-      const selectedShip = getSelectedShip();
-      if (!canControlShip(selectedShip)) return;
-      const point = toCanvasPoint(event);
-      state.dragPoint = state.dragType === 'fire'
-        ? clampFireTarget(selectedShip, point)
-        : clampDestination(selectedShip, point);
-      draw();
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (state.animating) return;
-      if (!state.dragging) return;
-      const selectedShip = getSelectedShip();
-      if (canControlShip(selectedShip) && state.dragPoint) {
-        if (state.dragType === 'fire') {
-          selectedShip.fireTarget = { ...state.dragPoint };
-        } else {
-          selectedShip.destination = { ...state.dragPoint };
+        if (clickedShip && canControlShip(clickedShip)) {
+          state.selectedShipId = clickedShip.id;
+          state.dragging = true;
+          state.dragType = state.mode;
+          state.dragPoint = { x: clickedShip.x, y: clickedShip.y };
+          draw();
+          return;
         }
-      }
-      state.dragging = false;
-      state.dragPoint = null;
-      draw();
-    });
 
-    document.getElementById('modeMove').addEventListener('click', () => {
-      if (state.animating) return;
-      state.mode = 'move';
-      document.getElementById('modeMove').classList.add('active');
-      document.getElementById('modeFire').classList.remove('active');
-    });
-
-    document.getElementById('modeFire').addEventListener('click', () => {
-      if (state.animating) return;
-      state.mode = 'fire';
-      document.getElementById('modeFire').classList.add('active');
-      document.getElementById('modeMove').classList.remove('active');
-    });
-
-    document.getElementById('finishPlanning').addEventListener('click', () => {
-      if (state.animating) return;
-      if (state.planningDone[state.currentPlanningPlayer]) return;
-      state.planningDone[state.currentPlanningPlayer] = true;
-      state.selectedShipId = null;
-      state.dragging = false;
-      state.dragPoint = null;
-
-      if (!state.planningDone[2]) {
-        state.currentPlanningPlayer = 2;
-      }
-
-      updateTurnStatus();
-      draw();
-    });
-
-    document.getElementById('executeTurn').addEventListener('click', () => {
-      executeTurn();
-    });
-
-    document.getElementById('clearDestinations').addEventListener('click', () => {
-      if (state.animating) return;
-      for (const ship of getAliveShips()) {
-        ship.destination = null;
-        ship.fireTarget = null;
-      }
-      if (!state.animating) {
         state.selectedShipId = null;
-      }
-      draw();
-    });
+        state.dragging = false;
+        state.dragPoint = null;
+        draw();
+      });
 
-    function renderLegend() {
-      const legend = document.getElementById('legend');
-      legend.innerHTML = ships.map((ship) => `
-        <div class="legend-item">
-          <span class="swatch" style="background:${ship.color}"></span>
-          <strong>${ship.name}</strong><br>
-          Time: <strong>Jogador ${ship.player}</strong><br>
-          Classe: <strong>${ship.type}</strong><br>
-          Alcance de movimento: <strong>${ship.moveRange}px</strong><br>
-          Alcance de tiro: <strong>${ship.shotRange}px</strong><br>
-          Velocidade: <strong>${ship.speed.toFixed(2)}x</strong><br>
-          Dano por tiro: <strong>${ship.damage}</strong><br>
-          Vida: <strong>${ship.alive ? `${ship.hp} HP` : 'Destruída'}</strong>
-        </div>
-      `).join('');
+      canvas.addEventListener('mousemove', (event) => {
+        if (state.animating) return;
+        if (!state.dragging) return;
+
+        const selectedShip = getSelectedShip();
+        if (!canControlShip(selectedShip)) return;
+
+        const point = toCanvasPoint(event);
+        state.dragPoint = state.dragType === 'fire'
+          ? clampFireTarget(selectedShip, point)
+          : clampDestination(selectedShip, point);
+
+        draw();
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (state.animating) return;
+        if (!state.dragging) return;
+
+        const selectedShip = getSelectedShip();
+        if (canControlShip(selectedShip) && state.dragPoint) {
+          if (state.dragType === 'fire') {
+            selectedShip.fireTarget = { ...state.dragPoint };
+          } else {
+            selectedShip.destination = { ...state.dragPoint };
+          }
+        }
+
+        state.dragging = false;
+        state.dragPoint = null;
+        draw();
+      });
+
+      document.getElementById('modeMove').addEventListener('click', () => {
+        if (state.animating) return;
+        state.mode = 'move';
+        document.getElementById('modeMove').classList.add('active');
+        document.getElementById('modeFire').classList.remove('active');
+      });
+
+      document.getElementById('modeFire').addEventListener('click', () => {
+        if (state.animating) return;
+        state.mode = 'fire';
+        document.getElementById('modeFire').classList.add('active');
+        document.getElementById('modeMove').classList.remove('active');
+      });
+
+      document.getElementById('finishPlanning').addEventListener('click', () => {
+        if (state.animating) return;
+        if (state.planningDone[state.currentPlanningPlayer]) return;
+
+        state.planningDone[state.currentPlanningPlayer] = true;
+        state.selectedShipId = null;
+        state.dragging = false;
+        state.dragPoint = null;
+
+        if (!state.planningDone[2]) {
+          state.currentPlanningPlayer = 2;
+        }
+
+        updateTurnStatus();
+        draw();
+      });
+
+      document.getElementById('executeTurn').addEventListener('click', () => {
+        executeTurn();
+      });
+
+      document.getElementById('clearDestinations').addEventListener('click', () => {
+        if (state.animating) return;
+
+        for (const ship of getAliveShips()) {
+          ship.destination = null;
+          ship.fireTarget = null;
+        }
+
+        if (!state.animating) {
+          state.selectedShipId = null;
+        }
+
+        draw();
+      });
+
+      window.addEventListener('resize', resizeCanvas);
     }
 
-    updateTurnStatus();
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    function init() {
+      bindEvents();
+      updateTurnStatus();
+      resizeCanvas();
+      draw();
+    }
+
+    return { init };
+  }
+
+  window.BatalhaEspacial = createGame();
+})();

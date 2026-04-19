@@ -1,1 +1,5 @@
-// UI hooks futuros. O motor principal está em ../game/engine.js
+document.addEventListener("DOMContentLoaded", () => {
+    if (window.BatalhaEspacial && typeof window.BatalhaEspacial.inicializar === "function") {
+        window.BatalhaEspacial.inicializar();
+    }
+});
