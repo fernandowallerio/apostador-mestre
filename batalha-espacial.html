@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Batalha Espacial – Protótipo</title>
+  <style>
+    :root {
+      --bg: #050816;
+      --panel: #0f1629;
+      --text: #dbe7ff;
+      --accent: #58a6ff;
+      --accent-2: #8bffcf;
+      --danger: #ff8a8a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: radial-gradient(circle at 20% 10%, #111a33 0%, var(--bg) 45%, #02040c 100%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .top-bar {
+      width: min(980px, 100%);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: rgba(15, 22, 41, 0.9);
+      border: 1px solid rgba(88, 166, 255, 0.35);
+      border-radius: 10px;
+      padding: 10px 12px;
+      backdrop-filter: blur(2px);
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button, .link-btn {
+      border: 1px solid rgba(88, 166, 255, 0.45);
+      background: #12203f;
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 14px;
+      transition: transform 0.08s ease, border-color 0.2s ease;
+    }
+
+    button:hover, .link-btn:hover {
+      border-color: var(--accent-2);
+      transform: translateY(-1px);
+    }
+
+    .hint {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .arena-wrap {
+      width: min(980px, 100%);
+      background: rgba(8, 12, 22, 0.92);
+      border: 1px solid rgba(88, 166, 255, 0.25);
+      border-radius: 12px;
+      padding: 8px;
+    }
+
+    canvas {
+      width: 100%;
+      height: min(68vh, 620px);
+      display: block;
+      border-radius: 8px;
+      background: transparent;
+      cursor: crosshair;
+    }
+
+    .legend {
+      width: min(980px, 100%);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .legend-item {
+      background: rgba(15, 22, 41, 0.8);
+      border: 1px solid rgba(88, 166, 255, 0.25);
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div>
+      <strong>Protótipo: Batalha Espacial</strong>
+      <div class="hint">Clique em uma nave, arraste para definir o destino (dentro do alcance) e solte para salvar.</div>
+    </div>
+    <div class="controls">
+      <a class="link-btn" href="index.html">Voltar ao site</a>
+      <button id="clearDestinations" type="button">Limpar destinos</button>
+    </div>
+  </div>
+
+  <div class="arena-wrap">
+    <canvas id="spaceCanvas" aria-label="Área de batalha espacial"></canvas>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <script>
+    const canvas = document.getElementById('spaceCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const stars = [];
+    const ships = [
+      { id: 1, name: 'Interceptor', x: 180, y: 180, range: 110, color: '#58a6ff', destination: null },
+      { id: 2, name: 'Fragata', x: 390, y: 260, range: 160, color: '#8bffcf', destination: null },
+      { id: 3, name: 'Cruzador', x: 650, y: 180, range: 220, color: '#ffd580', destination: null },
+    ];
+
+    const state = {
+      selectedShipId: null,
+      dragging: false,
+      dragPoint: null,
+    };
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildStars();
+      draw();
+    }
+
+    function buildStars() {
+      stars.length = 0;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const amount = Math.max(120, Math.floor((width * height) / 4500));
+      for (let i = 0; i < amount; i += 1) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          r: Math.random() * 1.8,
+          a: 0.25 + Math.random() * 0.55,
+        });
+      }
+    }
+
+    function clampDestination(ship, point) {
+      const dx = point.x - ship.x;
+      const dy = point.y - ship.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance <= ship.range) return point;
+      const ratio = ship.range / distance;
+      return {
+        x: ship.x + dx * ratio,
+        y: ship.y + dy * ratio,
+      };
+    }
+
+    function getShipAt(x, y) {
+      return ships.find((ship) => Math.hypot(x - ship.x, y - ship.y) <= 16) || null;
+    }
+
+    function getSelectedShip() {
+      return ships.find((ship) => ship.id === state.selectedShipId) || null;
+    }
+
+    function drawBackground() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#070d1f');
+      grad.addColorStop(1, '#030611');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      for (const star of stars) {
+        ctx.fillStyle = `rgba(210, 230, 255, ${star.a})`;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawRange(ship) {
+      ctx.strokeStyle = 'rgba(139, 255, 207, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.arc(ship.x, ship.y, ship.range, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawShip(ship, selected) {
+      const size = 14;
+      const p1 = { x: ship.x, y: ship.y - size };
+      const p2 = { x: ship.x - size * 0.75, y: ship.y + size * 0.75 };
+      const p3 = { x: ship.x + size * 0.75, y: ship.y + size * 0.75 };
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.closePath();
+      ctx.fillStyle = ship.color;
+      ctx.fill();
+
+      ctx.lineWidth = selected ? 2.5 : 1;
+      ctx.strokeStyle = selected ? '#ffffff' : 'rgba(230, 240, 255, 0.5)';
+      ctx.stroke();
+    }
+
+    function drawDestination(ship) {
+      if (!ship.destination) return;
+      ctx.strokeStyle = 'rgba(88, 166, 255, 0.9)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y);
+      ctx.lineTo(ship.destination.x, ship.destination.y);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(88, 166, 255, 0.95)';
+      ctx.beginPath();
+      ctx.arc(ship.destination.x, ship.destination.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawDragPreview(ship) {
+      if (!state.dragging || !state.dragPoint || state.selectedShipId !== ship.id) return;
+      ctx.strokeStyle = 'rgba(255, 138, 138, 0.95)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y);
+      ctx.lineTo(state.dragPoint.x, state.dragPoint.y);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 138, 138, 0.95)';
+      ctx.beginPath();
+      ctx.arc(state.dragPoint.x, state.dragPoint.y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function draw() {
+      drawBackground();
+
+      const selectedShip = getSelectedShip();
+      if (selectedShip) drawRange(selectedShip);
+
+      for (const ship of ships) {
+        drawDestination(ship);
+      }
+
+      if (selectedShip) drawDragPreview(selectedShip);
+
+      for (const ship of ships) {
+        drawShip(ship, selectedShip && selectedShip.id === ship.id);
+      }
+    }
+
+    function toCanvasPoint(event) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      };
+    }
+
+    canvas.addEventListener('mousedown', (event) => {
+      const point = toCanvasPoint(event);
+      const clickedShip = getShipAt(point.x, point.y);
+      if (clickedShip) {
+        state.selectedShipId = clickedShip.id;
+        state.dragging = true;
+        state.dragPoint = { x: clickedShip.x, y: clickedShip.y };
+        draw();
+        return;
+      }
+
+      state.selectedShipId = null;
+      state.dragging = false;
+      state.dragPoint = null;
+      draw();
+    });
+
+    canvas.addEventListener('mousemove', (event) => {
+      if (!state.dragging) return;
+      const selectedShip = getSelectedShip();
+      if (!selectedShip) return;
+      const point = toCanvasPoint(event);
+      state.dragPoint = clampDestination(selectedShip, point);
+      draw();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!state.dragging) return;
+      const selectedShip = getSelectedShip();
+      if (selectedShip && state.dragPoint) {
+        selectedShip.destination = { ...state.dragPoint };
+      }
+      state.dragging = false;
+      state.dragPoint = null;
+      draw();
+    });
+
+    document.getElementById('clearDestinations').addEventListener('click', () => {
+      for (const ship of ships) {
+        ship.destination = null;
+      }
+      draw();
+    });
+
+    function renderLegend() {
+      const legend = document.getElementById('legend');
+      legend.innerHTML = ships.map((ship) => `
+        <div class="legend-item">
+          <span class="swatch" style="background:${ship.color}"></span>
+          <strong>${ship.name}</strong><br>
+          Alcance de movimento: <strong>${ship.range}px</strong>
+        </div>
+      `).join('');
+    }
+
+    renderLegend();
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+  </script>
+</body>
+</html>
