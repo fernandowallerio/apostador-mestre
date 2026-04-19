@@ -1,3 +1,7 @@
+const canvas = document.getElementById('spaceCanvas');
+const ctx = canvas.getContext('2d');
+
+const stars = [];
 const ships = [
   { id: 1, player: 1, type: 'Interceptor', name: 'P1 Interceptor', x: 120, y: 140, moveRange: 180, shotRange: 420, speed: 1.25, damage: 15, size: 11, color: '#58a6ff', destination: null, fireTarget: null, hp: 80, maxHp: 80, alive: true, hitFlashUntil: 0 },
   { id: 2, player: 1, type: 'Fragata', name: 'P1 Fragata', x: 210, y: 240, moveRange: 150, shotRange: 360, speed: 1.0, damage: 25, size: 14, color: '#6db8ff', destination: null, fireTarget: null, hp: 120, maxHp: 120, alive: true, hitFlashUntil: 0 },
@@ -13,25 +17,20 @@ const ships = [
   { id: 12, player: 2, type: 'Rastreadora', name: 'P2 Rastreadora', x: 600, y: 230, moveRange: 120, shotRange: 420, speed: 0.9, damage: 35, size: 13, color: '#ffb0b0', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
 ];
 
-function clampDestination(ship, point) {
-  const dx = point.x - ship.x;
-  const dy = point.y - ship.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance <= ship.moveRange) return point;
-  const ratio = ship.moveRange / distance;
-  return { x: ship.x + dx * ratio, y: ship.y + dy * ratio };
-}
+const state = {
+  selectedShipId: null,
+  dragging: false,
+  dragPoint: null,
+  dragType: 'move',
+  mode: 'move',
+  animating: false,
+  animationFrameId: null,
+  projectiles: [],
+  currentPlanningPlayer: 1,
+  planningDone: { 1: false, 2: false },
+  impactEffects: [],
+  destructionEffects: [],
+};
 
-function clampFireTarget(ship, point) {
-  const dx = point.x - ship.x;
-  const dy = point.y - ship.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance <= ship.shotRange) return point;
-  const ratio = ship.shotRange / distance;
-  return { x: ship.x + dx * ratio, y: ship.y + dy * ratio };
-}
-
-function easeInOutCubic(t) {
-  if (t < 0.5) return 4 * t * t * t;
-  return 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
+const SHOT_SPEED = 0.272;
+const HIT_RADIUS = 13;
