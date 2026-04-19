@@ -72,6 +72,12 @@
       background: #2b1620;
     }
 
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
     .hint {
       font-size: 13px;
       opacity: 0.9;
@@ -124,12 +130,14 @@
   <div class="top-bar">
     <div>
       <strong>Protótipo: Batalha Espacial</strong>
-      <div class="hint">Planeje movimento/tiro e execute o turno: projéteis causam dano e naves com 0 HP são destruídas.</div>
+      <div class="hint">Jogador 1 planeja, depois Jogador 2. Após ambos finalizarem, execute o turno simultâneo.</div>
+      <div class="hint" id="turnStatus"></div>
     </div>
     <div class="controls">
       <a class="link-btn" href="index.html">Voltar ao site</a>
       <button id="modeMove" type="button" class="active">Modo: Movimento</button>
       <button id="modeFire" type="button">Modo: Tiro</button>
+      <button id="finishPlanning" type="button">Finalizar planejamento</button>
       <button id="executeTurn" type="button">Executar turno</button>
       <button id="clearDestinations" type="button">Limpar destinos</button>
     </div>
@@ -147,9 +155,12 @@
 
     const stars = [];
     const ships = [
-      { id: 1, name: 'Interceptor', x: 180, y: 180, range: 110, color: '#58a6ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
-      { id: 2, name: 'Fragata', x: 390, y: 260, range: 160, color: '#8bffcf', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
-      { id: 3, name: 'Cruzador', x: 650, y: 180, range: 220, color: '#ffd580', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
+      { id: 1, player: 1, name: 'P1 Interceptor', x: 140, y: 180, range: 110, color: '#58a6ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
+      { id: 2, player: 1, name: 'P1 Fragata', x: 260, y: 290, range: 160, color: '#6db8ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
+      { id: 3, player: 1, name: 'P1 Cruzador', x: 360, y: 160, range: 220, color: '#8bcbff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
+      { id: 4, player: 2, name: 'P2 Interceptor', x: 840, y: 180, range: 110, color: '#ff8a8a', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
+      { id: 5, player: 2, name: 'P2 Fragata', x: 720, y: 290, range: 160, color: '#ff9f9f', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
+      { id: 6, player: 2, name: 'P2 Cruzador', x: 620, y: 160, range: 220, color: '#ffb3b3', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true },
     ];
 
     const state = {
@@ -161,6 +172,8 @@
       animating: false,
       animationFrameId: null,
       projectiles: [],
+      currentPlanningPlayer: 1,
+      planningDone: { 1: false, 2: false },
     };
 
     const SHOT_MAX_DISTANCE = 280;
@@ -227,6 +240,29 @@
 
     function getAliveShips() {
       return ships.filter((ship) => ship.alive);
+    }
+
+    function getPlanningShips(player) {
+      return getAliveShips().filter((ship) => ship.player === player);
+    }
+
+    function canControlShip(ship) {
+      return ship && ship.alive && ship.player === state.currentPlanningPlayer && !state.animating;
+    }
+
+    function updateTurnStatus() {
+      const turnStatus = document.getElementById('turnStatus');
+      const executeButton = document.getElementById('executeTurn');
+      const finishButton = document.getElementById('finishPlanning');
+      const bothReady = state.planningDone[1] && state.planningDone[2];
+      const current = state.currentPlanningPlayer;
+      const teamLabel = current === 1 ? 'Jogador 1 (Azul)' : 'Jogador 2 (Vermelho)';
+      const aliveCount = getPlanningShips(current).length;
+      turnStatus.textContent = bothReady
+        ? 'Planejamento concluído para os dois jogadores. Pode executar o turno.'
+        : `Vez de planejamento: ${teamLabel} - naves ativas: ${aliveCount}.`;
+      executeButton.disabled = !bothReady || state.animating;
+      finishButton.disabled = bothReady || state.animating;
     }
 
     function drawBackground() {
@@ -380,6 +416,7 @@
 
     function executeTurn() {
       if (state.animating) return;
+      if (!(state.planningDone[1] && state.planningDone[2])) return;
 
       const movingShips = getAliveShips()
         .filter((ship) => ship.destination)
@@ -417,6 +454,7 @@
       state.animating = true;
       state.dragging = false;
       state.dragPoint = null;
+      updateTurnStatus();
       state.projectiles = shootingShips.map((shot) => ({
         ship: shot.ship,
         ownerShipId: shot.ship.id,
@@ -497,6 +535,11 @@
         state.animating = false;
         state.animationFrameId = null;
         state.projectiles = [];
+        state.planningDone[1] = false;
+        state.planningDone[2] = false;
+        state.currentPlanningPlayer = 1;
+        state.selectedShipId = null;
+        updateTurnStatus();
         draw();
       }
 
@@ -505,9 +548,10 @@
 
     canvas.addEventListener('mousedown', (event) => {
       if (state.animating) return;
+      if (state.planningDone[state.currentPlanningPlayer]) return;
       const point = toCanvasPoint(event);
       const clickedShip = getShipAt(point.x, point.y);
-      if (clickedShip) {
+      if (clickedShip && canControlShip(clickedShip)) {
         state.selectedShipId = clickedShip.id;
         state.dragging = true;
         state.dragType = state.mode;
@@ -526,7 +570,7 @@
       if (state.animating) return;
       if (!state.dragging) return;
       const selectedShip = getSelectedShip();
-      if (!selectedShip) return;
+      if (!canControlShip(selectedShip)) return;
       const point = toCanvasPoint(event);
       state.dragPoint = state.dragType === 'fire'
         ? clampFireTarget(selectedShip, point)
@@ -538,7 +582,7 @@
       if (state.animating) return;
       if (!state.dragging) return;
       const selectedShip = getSelectedShip();
-      if (selectedShip && state.dragPoint) {
+      if (canControlShip(selectedShip) && state.dragPoint) {
         if (state.dragType === 'fire') {
           selectedShip.fireTarget = { ...state.dragPoint };
         } else {
@@ -564,6 +608,22 @@
       document.getElementById('modeMove').classList.remove('active');
     });
 
+    document.getElementById('finishPlanning').addEventListener('click', () => {
+      if (state.animating) return;
+      if (state.planningDone[state.currentPlanningPlayer]) return;
+      state.planningDone[state.currentPlanningPlayer] = true;
+      state.selectedShipId = null;
+      state.dragging = false;
+      state.dragPoint = null;
+
+      if (!state.planningDone[2]) {
+        state.currentPlanningPlayer = 2;
+      }
+
+      updateTurnStatus();
+      draw();
+    });
+
     document.getElementById('executeTurn').addEventListener('click', () => {
       executeTurn();
     });
@@ -574,6 +634,9 @@
         ship.destination = null;
         ship.fireTarget = null;
       }
+      if (!state.animating) {
+        state.selectedShipId = null;
+      }
       draw();
     });
 
@@ -583,12 +646,14 @@
         <div class="legend-item">
           <span class="swatch" style="background:${ship.color}"></span>
           <strong>${ship.name}</strong><br>
+          Time: <strong>Jogador ${ship.player}</strong><br>
           Alcance de movimento: <strong>${ship.range}px</strong><br>
           Vida: <strong>${ship.alive ? `${ship.hp} HP` : 'Destruída'}</strong>
         </div>
       `).join('');
     }
 
+    updateTurnStatus();
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
   </script>
