@@ -176,12 +176,12 @@
 
     const stars = [];
     const ships = [
-      { id: 1, player: 1, type: 'Interceptor', name: 'P1 Interceptor', x: 140, y: 180, range: 190, damage: 15, size: 11, color: '#58a6ff', destination: null, fireTarget: null, hp: 70, maxHp: 70, alive: true, hitFlashUntil: 0 },
-      { id: 2, player: 1, type: 'Fragata', name: 'P1 Fragata', x: 260, y: 290, range: 145, damage: 25, size: 14, color: '#6db8ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
-      { id: 3, player: 1, type: 'Cruzador', name: 'P1 Cruzador', x: 360, y: 160, range: 105, damage: 38, size: 18, color: '#8bcbff', destination: null, fireTarget: null, hp: 145, maxHp: 145, alive: true, hitFlashUntil: 0 },
-      { id: 4, player: 2, type: 'Interceptor', name: 'P2 Interceptor', x: 840, y: 180, range: 190, damage: 15, size: 11, color: '#ff8a8a', destination: null, fireTarget: null, hp: 70, maxHp: 70, alive: true, hitFlashUntil: 0 },
-      { id: 5, player: 2, type: 'Fragata', name: 'P2 Fragata', x: 720, y: 290, range: 145, damage: 25, size: 14, color: '#ff9f9f', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
-      { id: 6, player: 2, type: 'Cruzador', name: 'P2 Cruzador', x: 620, y: 160, range: 105, damage: 38, size: 18, color: '#ffb3b3', destination: null, fireTarget: null, hp: 145, maxHp: 145, alive: true, hitFlashUntil: 0 },
+      { id: 1, player: 1, type: 'Interceptor', name: 'P1 Interceptor', x: 140, y: 180, range: 190, speed: 1.25, damage: 15, size: 11, color: '#58a6ff', destination: null, fireTarget: null, hp: 70, maxHp: 70, alive: true, hitFlashUntil: 0 },
+      { id: 2, player: 1, type: 'Fragata', name: 'P1 Fragata', x: 260, y: 290, range: 145, speed: 1.0, damage: 25, size: 14, color: '#6db8ff', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
+      { id: 3, player: 1, type: 'Cruzador', name: 'P1 Cruzador', x: 360, y: 160, range: 105, speed: 0.8, damage: 38, size: 18, color: '#8bcbff', destination: null, fireTarget: null, hp: 145, maxHp: 145, alive: true, hitFlashUntil: 0 },
+      { id: 4, player: 2, type: 'Interceptor', name: 'P2 Interceptor', x: 840, y: 180, range: 190, speed: 1.25, damage: 15, size: 11, color: '#ff8a8a', destination: null, fireTarget: null, hp: 70, maxHp: 70, alive: true, hitFlashUntil: 0 },
+      { id: 5, player: 2, type: 'Fragata', name: 'P2 Fragata', x: 720, y: 290, range: 145, speed: 1.0, damage: 25, size: 14, color: '#ff9f9f', destination: null, fireTarget: null, hp: 100, maxHp: 100, alive: true, hitFlashUntil: 0 },
+      { id: 6, player: 2, type: 'Cruzador', name: 'P2 Cruzador', x: 620, y: 160, range: 105, speed: 0.8, damage: 38, size: 18, color: '#ffb3b3', destination: null, fireTarget: null, hp: 145, maxHp: 145, alive: true, hitFlashUntil: 0 },
     ];
 
     const state = {
@@ -512,7 +512,7 @@
             startY: ship.y,
             endX: target.x,
             endY: target.y,
-            duration: Math.max(380, Math.min(1400, distance * 4.2)),
+            duration: Math.max(280, Math.min(1700, (distance * 4.2) / ship.speed)),
           };
         });
 
@@ -738,6 +738,7 @@
           Time: <strong>Jogador ${ship.player}</strong><br>
           Classe: <strong>${ship.type}</strong><br>
           Alcance de movimento: <strong>${ship.range}px</strong><br>
+          Velocidade: <strong>${ship.speed.toFixed(2)}x</strong><br>
           Dano por tiro: <strong>${ship.damage}</strong><br>
           Vida: <strong>${ship.alive ? `${ship.hp} HP` : 'Destruída'}</strong>
         </div>
