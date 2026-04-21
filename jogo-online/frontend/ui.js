@@ -66,119 +66,158 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let selectedFleet = [];
 
-  const arenaWrap = document.querySelector('.arena-wrap');
+  const fleetOverlay = document.getElementById('fleetOverlay');
+  const waitingOverlay = document.getElementById('waitingOverlay');
+  const fleetOptions = document.getElementById('fleetOptions');
+  const fleetStatus = document.getElementById('fleetStatus');
+  const confirmFleetBtn = document.getElementById('confirmFleetBtn');
+
   const topBar = document.querySelector('.top-bar');
+  const arenaWrap = document.querySelector('.arena-wrap');
 
-  function createFleetScreen() {
-    const overlay = document.createElement('div');
-    overlay.id = 'fleetOverlay';
-    overlay.className = 'fleet-overlay';
+  function updateFleetStatus() {
+    if (!fleetStatus) return;
 
-    overlay.innerHTML = `
-      <div class="fleet-panel">
-        <div class="fleet-header">
-          <h2>Escolha sua Frota</h2>
-          <p>Selecione exatamente ${FLEET_LIMIT} naves para iniciar a batalha.</p>
-        </div>
+    const count = selectedFleet.length;
 
-        <div id="fleetStatus" class="fleet-status">
-          Selecionadas: 0 / ${FLEET_LIMIT}
-        </div>
+    if (count === 0) {
+      fleetStatus.textContent = `Escolha ${FLEET_LIMIT} naves para continuar.`;
+    } else if (count < FLEET_LIMIT) {
+      fleetStatus.textContent = `Selecionadas: ${count} / ${FLEET_LIMIT}`;
+    } else {
+      fleetStatus.textContent = `Frota pronta: ${count} / ${FLEET_LIMIT}`;
+    }
 
-        <div id="fleetGrid" class="fleet-grid"></div>
-
-        <div class="fleet-actions">
-          <button id="clearFleetSelection" type="button">Limpar seleção</button>
-          <button id="confirmFleetSelection" type="button">Confirmar frota</button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-    return overlay;
+    if (confirmFleetBtn) {
+      confirmFleetBtn.disabled = count !== FLEET_LIMIT;
+    }
   }
 
-  function renderFleetCards() {
-    const grid = document.getElementById('fleetGrid');
-    const status = document.getElementById('fleetStatus');
+  function toggleShipSelection(shipId) {
+    const alreadySelected = selectedFleet.includes(shipId);
 
-    if (!grid || !status) return;
+    if (alreadySelected) {
+      selectedFleet = selectedFleet.filter((id) => id !== shipId);
+    } else {
+      if (selectedFleet.length >= FLEET_LIMIT) return;
+      selectedFleet.push(shipId);
+    }
 
-    status.textContent = `Selecionadas: ${selectedFleet.length} / ${FLEET_LIMIT}`;
-    grid.innerHTML = '';
+    renderFleetOptions();
+    updateFleetStatus();
+  }
+
+  function createStat(label, value) {
+    return `
+      <div class="fleet-stat"><strong>${label}:</strong> ${value}</div>
+    `;
+  }
+
+  function renderFleetOptions() {
+    if (!fleetOptions) return;
+
+    fleetOptions.innerHTML = '';
 
     SHIP_CLASSES.forEach((shipClass) => {
       const isSelected = selectedFleet.includes(shipClass.id);
+      const isDisabled = !isSelected && selectedFleet.length >= FLEET_LIMIT;
 
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = `fleet-card ${isSelected ? 'selected' : ''}`;
+      const card = document.createElement('div');
+      card.className = `fleet-card${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`;
 
       card.innerHTML = `
-        <div class="fleet-card-top">
+        <div class="fleet-card-title">
           <h3>${shipClass.name}</h3>
-          <span class="fleet-badge">${shipClass.badge}</span>
+          <span class="fleet-card-badge">${shipClass.badge}</span>
         </div>
-        <p class="fleet-description">${shipClass.description}</p>
+        <p class="fleet-card-desc">${shipClass.description}</p>
         <div class="fleet-stats">
-          <div><strong>HP:</strong> ${shipClass.hp}</div>
-          <div><strong>Mov.:</strong> ${shipClass.move}</div>
-          <div><strong>Tiro:</strong> ${shipClass.shot}</div>
-          <div><strong>Dano:</strong> ${shipClass.damage}</div>
+          ${createStat('HP', shipClass.hp)}
+          ${createStat('Mov.', shipClass.move)}
+          ${createStat('Tiro', shipClass.shot)}
+          ${createStat('Dano', shipClass.damage)}
         </div>
       `;
 
       card.addEventListener('click', () => {
-        if (isSelected) {
-          selectedFleet = selectedFleet.filter((id) => id !== shipClass.id);
-        } else {
-          if (selectedFleet.length >= FLEET_LIMIT) return;
-          selectedFleet.push(shipClass.id);
-        }
-
-        renderFleetCards();
+        if (isDisabled) return;
+        toggleShipSelection(shipClass.id);
       });
 
-      grid.appendChild(card);
+      fleetOptions.appendChild(card);
     });
   }
 
-  function bindFleetActions(overlay) {
-    const clearButton = document.getElementById('clearFleetSelection');
-    const confirmButton = document.getElementById('confirmFleetSelection');
-
-    if (clearButton) {
-      clearButton.addEventListener('click', () => {
-        selectedFleet = [];
-        renderFleetCards();
-      });
+  function startBattleAfterFleetSelection() {
+    if (fleetOverlay) {
+      fleetOverlay.classList.add('hidden');
     }
 
-    if (confirmButton) {
-      confirmButton.addEventListener('click', () => {
-        if (selectedFleet.length !== FLEET_LIMIT) {
-          alert(`Escolha exatamente ${FLEET_LIMIT} naves.`);
-          return;
-        }
+    if (waitingOverlay) {
+      waitingOverlay.classList.add('hidden');
+    }
 
-        window.selectedFleet = [...selectedFleet];
+    if (topBar) {
+      topBar.style.display = '';
+    }
 
-        overlay.remove();
+    if (arenaWrap) {
+      arenaWrap.style.display = '';
+    }
 
-        if (topBar) topBar.style.display = '';
-        if (arenaWrap) arenaWrap.style.display = '';
-
-        if (window.BatalhaEspacial && typeof window.BatalhaEspacial.init === 'function') {
-          window.BatalhaEspacial.init();
-        }
-      });
+    if (window.BatalhaEspacial && typeof window.BatalhaEspacial.init === 'function') {
+      window.BatalhaEspacial.init();
     }
   }
 
-  if (topBar) topBar.style.display = 'none';
-  if (arenaWrap) arenaWrap.style.display = 'none';
+  function confirmFleetSelection() {
+    if (selectedFleet.length !== FLEET_LIMIT) {
+      alert(`Escolha exatamente ${FLEET_LIMIT} naves.`);
+      return;
+    }
 
-  const overlay = createFleetScreen();
-  renderFleetCards();
-  bindFleetActions(overlay);
+    window.selectedFleet = [...selectedFleet];
+
+    if (fleetOverlay) {
+      fleetOverlay.classList.add('hidden');
+    }
+
+    if (waitingOverlay) {
+      waitingOverlay.classList.remove('hidden');
+    }
+
+    // TEMPORÁRIO:
+    // como o online real ainda não existe, vamos simular a confirmação
+    // e iniciar a batalha após um pequeno intervalo.
+    setTimeout(() => {
+      startBattleAfterFleetSelection();
+    }, 1200);
+  }
+
+  function initFleetUI() {
+    if (topBar) {
+      topBar.style.display = 'none';
+    }
+
+    if (arenaWrap) {
+      arenaWrap.style.display = 'none';
+    }
+
+    if (fleetOverlay) {
+      fleetOverlay.classList.remove('hidden');
+    }
+
+    if (waitingOverlay) {
+      waitingOverlay.classList.add('hidden');
+    }
+
+    renderFleetOptions();
+    updateFleetStatus();
+
+    if (confirmFleetBtn) {
+      confirmFleetBtn.addEventListener('click', confirmFleetSelection);
+    }
+  }
+
+  initFleetUI();
 });
