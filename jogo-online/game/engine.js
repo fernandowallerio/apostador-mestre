@@ -224,7 +224,7 @@
     }
 
     function getShipAt(x, y) {
-      return ships.find((ship) => ship.alive && Math.hypot(x - ship.x, y - ship.y) <= 20) || null;
+      return ships.find((ship) => ship.alive && Math.hypot(x - ship.x, y - ship.y) <= 22) || null;
     }
 
     function getSelectedShip() {
@@ -315,10 +315,19 @@
     function drawInterceptor(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(0, -s - 2);
-      ctx.lineTo(-s * 0.55, s * 0.8);
-      ctx.lineTo(0, s * 0.25);
-      ctx.lineTo(s * 0.55, s * 0.8);
+      ctx.moveTo(0, -s * 1.45);
+      ctx.lineTo(-s * 0.32, -s * 0.1);
+      ctx.lineTo(-s * 0.68, s * 0.95);
+      ctx.lineTo(0, s * 0.35);
+      ctx.lineTo(s * 0.68, s * 0.95);
+      ctx.lineTo(s * 0.32, -s * 0.1);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.18, s * 0.22);
+      ctx.lineTo(0, s * 0.7);
+      ctx.lineTo(s * 0.18, s * 0.22);
       ctx.closePath();
       ctx.fill();
     }
@@ -326,9 +335,11 @@
     function drawFragata(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(0, -s);
-      ctx.lineTo(-s * 0.75, s * 0.8);
-      ctx.lineTo(s * 0.75, s * 0.8);
+      ctx.moveTo(0, -s * 1.15);
+      ctx.lineTo(-s * 0.72, -s * 0.05);
+      ctx.lineTo(-s * 0.58, s * 0.9);
+      ctx.lineTo(s * 0.58, s * 0.9);
+      ctx.lineTo(s * 0.72, -s * 0.05);
       ctx.closePath();
       ctx.fill();
     }
@@ -336,49 +347,66 @@
     function drawCruzador(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(0, -s);
-      ctx.lineTo(-s * 0.95, s * 0.2);
-      ctx.lineTo(-s * 0.6, s);
-      ctx.lineTo(s * 0.6, s);
-      ctx.lineTo(s * 0.95, s * 0.2);
+      ctx.moveTo(0, -s * 1.05);
+      ctx.lineTo(-s * 1.0, -s * 0.05);
+      ctx.lineTo(-s * 0.82, s * 0.35);
+      ctx.lineTo(-s * 0.58, s * 1.05);
+      ctx.lineTo(s * 0.58, s * 1.05);
+      ctx.lineTo(s * 0.82, s * 0.35);
+      ctx.lineTo(s * 1.0, -s * 0.05);
       ctx.closePath();
       ctx.fill();
+
+      ctx.fillRect(-s * 0.18, -s * 0.5, s * 0.36, s * 0.95);
     }
 
     function drawSniper(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(0, -s * 1.25);
-      ctx.lineTo(-s * 0.45, s);
-      ctx.lineTo(0, s * 0.45);
-      ctx.lineTo(s * 0.45, s);
+      ctx.moveTo(0, -s * 1.75);
+      ctx.lineTo(-s * 0.22, -s * 0.15);
+      ctx.lineTo(-s * 0.42, s * 1.0);
+      ctx.lineTo(0, s * 0.48);
+      ctx.lineTo(s * 0.42, s * 1.0);
+      ctx.lineTo(s * 0.22, -s * 0.15);
       ctx.closePath();
       ctx.fill();
+
+      ctx.fillRect(-s * 0.06, -s * 1.95, s * 0.12, s * 0.5);
     }
 
     function drawArtilharia(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(0, -s * 0.9);
-      ctx.lineTo(-s, s * 0.15);
-      ctx.lineTo(-s * 0.75, s);
-      ctx.lineTo(s * 0.75, s);
-      ctx.lineTo(s, s * 0.15);
+      ctx.moveTo(0, -s * 0.95);
+      ctx.lineTo(-s * 1.05, -s * 0.1);
+      ctx.lineTo(-s * 0.9, s * 0.28);
+      ctx.lineTo(-s * 0.7, s * 1.05);
+      ctx.lineTo(s * 0.7, s * 1.05);
+      ctx.lineTo(s * 0.9, s * 0.28);
+      ctx.lineTo(s * 1.05, -s * 0.1);
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillRect(-s * 0.18, -s * 1.25, s * 0.36, s * 0.55);
+      ctx.fillRect(-s * 0.16, -s * 1.55, s * 0.32, s * 0.9);
+      ctx.fillRect(-s * 0.42, -s * 0.25, s * 0.84, s * 0.2);
     }
 
     function drawRastreadora(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(0, -s);
-      ctx.lineTo(-s * 0.8, 0);
-      ctx.lineTo(0, s);
-      ctx.lineTo(s * 0.8, 0);
+      ctx.moveTo(0, -s * 1.2);
+      ctx.lineTo(-s * 0.88, -s * 0.05);
+      ctx.lineTo(0, s * 1.1);
+      ctx.lineTo(s * 0.88, -s * 0.05);
       ctx.closePath();
       ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.55, -s * 0.25);
+      ctx.lineTo(0, -s * 0.75);
+      ctx.lineTo(s * 0.55, -s * 0.25);
+      ctx.stroke();
     }
 
     function drawShip(ship, selected) {
@@ -390,8 +418,8 @@
       ctx.rotate(ship.angle || 0);
 
       ctx.fillStyle = hitFlashOn ? '#ffffff' : ship.color;
-      ctx.strokeStyle = selected ? '#ffffff' : 'rgba(230, 240, 255, 0.5)';
-      ctx.lineWidth = selected ? 2.5 : 1;
+      ctx.strokeStyle = selected ? '#ffffff' : 'rgba(230, 240, 255, 0.7)';
+      ctx.lineWidth = selected ? 2.5 : 1.2;
 
       switch (ship.shape) {
         case 'interceptor':
@@ -420,9 +448,9 @@
       ctx.restore();
 
       const hpRatio = Math.max(0, ship.hp) / ship.maxHp;
-      const barWidth = 32;
+      const barWidth = 34;
       const barX = ship.x - barWidth / 2;
-      const barY = ship.y - ship.size - 14;
+      const barY = ship.y - ship.size - 16;
 
       ctx.fillStyle = 'rgba(15, 25, 45, 0.9)';
       ctx.fillRect(barX, barY, barWidth, 4);
