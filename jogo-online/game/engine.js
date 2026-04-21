@@ -14,7 +14,13 @@
         damage: 15,
         size: 11,
         hp: 80,
-        shape: 'interceptor'
+        shape: 'interceptor',
+        weaponType: 'burst',
+        projectileColor: '#7fe7ff',
+        projectileSize: 2,
+        projectileSpeed: 0.40,
+        burstCount: 3,
+        spreadAngle: 0.12
       },
       fragata: {
         type: 'Fragata',
@@ -24,7 +30,11 @@
         damage: 25,
         size: 14,
         hp: 120,
-        shape: 'fragata'
+        shape: 'fragata',
+        weaponType: 'standard',
+        projectileColor: '#4da6ff',
+        projectileSize: 3.2,
+        projectileSpeed: 0.30
       },
       cruzador: {
         type: 'Cruzador',
@@ -34,7 +44,11 @@
         damage: 40,
         size: 18,
         hp: 180,
-        shape: 'cruzador'
+        shape: 'cruzador',
+        weaponType: 'heavy',
+        projectileColor: '#5f79ff',
+        projectileSize: 5.2,
+        projectileSpeed: 0.22
       },
       sniper: {
         type: 'Sniper',
@@ -44,7 +58,11 @@
         damage: 50,
         size: 12,
         hp: 70,
-        shape: 'sniper'
+        shape: 'sniper',
+        weaponType: 'beam',
+        projectileColor: '#ffffff',
+        projectileSize: 2,
+        projectileSpeed: 0.55
       },
       artilharia: {
         type: 'Artilharia',
@@ -54,7 +72,11 @@
         damage: 60,
         size: 19,
         hp: 150,
-        shape: 'artilharia'
+        shape: 'artilharia',
+        weaponType: 'explosive',
+        projectileColor: '#ffae42',
+        projectileSize: 6,
+        projectileSpeed: 0.18
       },
       rastreadora: {
         type: 'Rastreadora',
@@ -64,7 +86,11 @@
         damage: 35,
         size: 13,
         hp: 100,
-        shape: 'rastreadora'
+        shape: 'rastreadora',
+        weaponType: 'homing',
+        projectileColor: '#ff5cff',
+        projectileSize: 3.5,
+        projectileSpeed: 0.24
       }
     };
 
@@ -114,7 +140,13 @@
           maxHp: def.hp,
           alive: true,
           hitFlashUntil: 0,
-          angle: Math.PI / 2
+          angle: Math.PI / 2,
+          weaponType: def.weaponType,
+          projectileColor: def.projectileColor,
+          projectileSize: def.projectileSize,
+          projectileSpeed: def.projectileSpeed,
+          burstCount: def.burstCount || 1,
+          spreadAngle: def.spreadAngle || 0
         });
       });
 
@@ -143,7 +175,13 @@
           maxHp: def.hp,
           alive: true,
           hitFlashUntil: 0,
-          angle: -Math.PI / 2
+          angle: -Math.PI / 2,
+          weaponType: def.weaponType,
+          projectileColor: def.projectileColor,
+          projectileSize: def.projectileSize,
+          projectileSpeed: def.projectileSpeed,
+          burstCount: def.burstCount || 1,
+          spreadAngle: def.spreadAngle || 0
         });
       });
 
@@ -167,7 +205,7 @@
       destructionEffects: [],
     };
 
-    const SHOT_SPEED = 0.272;
+    const DEFAULT_PROJECTILE_SPEED = 0.272;
     const HIT_RADIUS = 13;
 
     function getAngleToPoint(ship, point) {
@@ -261,12 +299,13 @@
       finishButton.disabled = bothReady || state.animating;
     }
 
-    function addImpactEffect(x, y) {
+    function addImpactEffect(x, y, scale = 1) {
       state.impactEffects.push({
         x,
         y,
         startedAt: performance.now(),
         duration: 240,
+        scale
       });
     }
 
@@ -461,7 +500,7 @@
     function drawImpactEffects(now) {
       for (const effect of state.impactEffects) {
         const t = Math.min(1, (now - effect.startedAt) / effect.duration);
-        const radius = 4 + (22 * t);
+        const radius = (4 + (22 * t)) * (effect.scale || 1);
         const alpha = 1 - t;
         ctx.strokeStyle = `rgba(255, 230, 180, ${Math.max(0.1, alpha).toFixed(2)})`;
         ctx.lineWidth = 1.8;
@@ -517,23 +556,191 @@
       ctx.fill();
     }
 
+    function drawProjectileByType(projectile) {
+      const size = projectile.projectileSize || 3;
+      const color = projectile.projectileColor || '#ff5a5a';
+      const weaponType = projectile.weaponType || 'standard';
+
+      ctx.save();
+      ctx.translate(projectile.x, projectile.y);
+
+      if (weaponType !== 'standard') {
+        ctx.rotate(Math.atan2(projectile.dirY, projectile.dirX) + Math.PI / 2);
+      }
+
+      switch (weaponType) {
+        case 'burst':
+          ctx.strokeStyle = color + '66';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(0, size * 3.2);
+          ctx.lineTo(0, -size * 3.2);
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(0, 0, size, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+
+        case 'heavy':
+          ctx.strokeStyle = color + '55';
+          ctx.lineWidth = size + 1;
+          ctx.beginPath();
+          ctx.moveTo(0, size * 3.4);
+          ctx.lineTo(0, -size * 2.8);
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(0, 0, size + 1.4, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#ffffffaa';
+          ctx.beginPath();
+          ctx.arc(0, 0, size * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+
+        case 'beam':
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, size * 5);
+          ctx.lineTo(0, -size * 5);
+          ctx.stroke();
+          break;
+
+        case 'explosive':
+          ctx.strokeStyle = color + '55';
+          ctx.lineWidth = size;
+          ctx.beginPath();
+          ctx.moveTo(0, size * 3.4);
+          ctx.lineTo(0, -size * 2.6);
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(0, 0, size + 1, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#fff4';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(0, 0, size + 4, 0, Math.PI * 2);
+          ctx.stroke();
+          break;
+
+        case 'homing':
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.moveTo(0, -size * 1.8);
+          ctx.lineTo(-size * 0.7, size * 1.0);
+          ctx.lineTo(size * 0.7, size * 1.0);
+          ctx.closePath();
+          ctx.fill();
+          break;
+
+        default:
+          ctx.strokeStyle = color + '55';
+          ctx.lineWidth = size;
+          ctx.beginPath();
+          ctx.moveTo(0, size * 3);
+          ctx.lineTo(0, -size * 3);
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(0, 0, size, 0, Math.PI * 2);
+          ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
     function drawProjectiles() {
       for (const projectile of state.projectiles) {
         if (!projectile.alive) continue;
-
-        const trailLen = 14;
-        ctx.strokeStyle = 'rgba(255, 120, 120, 0.42)';
-        ctx.lineWidth = 2.3;
-        ctx.beginPath();
-        ctx.moveTo(projectile.x - projectile.dirX * trailLen, projectile.y - projectile.dirY * trailLen);
-        ctx.lineTo(projectile.x, projectile.y);
-        ctx.stroke();
-
-        ctx.fillStyle = '#ff5a5a';
-        ctx.beginPath();
-        ctx.arc(projectile.x, projectile.y, 2.8, 0, Math.PI * 2);
-        ctx.fill();
+        drawProjectileByType(projectile);
       }
+    }
+
+    function spawnProjectilesForShip(ship) {
+      if (!ship.fireTarget) return [];
+
+      const dx = ship.fireTarget.x - ship.x;
+      const dy = ship.fireTarget.y - ship.y;
+      const baseAngle = Math.atan2(dy, dx);
+      const distance = Math.hypot(dx, dy) || 1;
+      const dirX = dx / distance;
+      const dirY = dy / distance;
+
+      const weaponType = ship.weaponType || 'standard';
+      const projectileColor = ship.projectileColor || '#ff5a5a';
+      const projectileSize = ship.projectileSize || 3;
+      const projectileSpeed = ship.projectileSpeed || DEFAULT_PROJECTILE_SPEED;
+
+      if (weaponType === 'burst') {
+        const count = ship.burstCount || 3;
+        const spread = ship.spreadAngle || 0.10;
+        const projectiles = [];
+
+        for (let i = 0; i < count; i += 1) {
+          const offsetIndex = i - (count - 1) / 2;
+          const angle = baseAngle + offsetIndex * spread;
+          const burstDirX = Math.cos(angle);
+          const burstDirY = Math.sin(angle);
+
+          projectiles.push({
+            ownerShipId: ship.id,
+            weaponType,
+            projectileColor,
+            projectileSize,
+            projectileSpeed,
+            x: ship.x,
+            y: ship.y,
+            dirX: burstDirX,
+            dirY: burstDirY,
+            damage: Math.ceil(ship.damage / count),
+            impactScale: 0.8,
+            alive: true
+          });
+        }
+
+        return projectiles;
+      }
+
+      if (weaponType === 'heavy') {
+        return [{
+          ownerShipId: ship.id,
+          weaponType,
+          projectileColor,
+          projectileSize,
+          projectileSpeed,
+          x: ship.x,
+          y: ship.y,
+          dirX,
+          dirY,
+          damage: ship.damage,
+          impactScale: 1.45,
+          alive: true
+        }];
+      }
+
+      return [{
+        ownerShipId: ship.id,
+        weaponType,
+        projectileColor,
+        projectileSize,
+        projectileSpeed,
+        x: ship.x,
+        y: ship.y,
+        dirX,
+        dirY,
+        damage: ship.damage,
+        impactScale: 1,
+        alive: true
+      }];
     }
 
     function draw() {
@@ -591,21 +798,7 @@
           };
         });
 
-      const shootingShips = getAliveShips()
-        .filter((ship) => ship.fireTarget)
-        .map((ship) => {
-          const dx = ship.fireTarget.x - ship.x;
-          const dy = ship.fireTarget.y - ship.y;
-          const distance = Math.hypot(dx, dy) || 1;
-          return {
-            ship,
-            startX: ship.x,
-            startY: ship.y,
-            dirX: dx / distance,
-            dirY: dy / distance,
-            damage: ship.damage,
-          };
-        });
+      const shootingShips = getAliveShips().filter((ship) => ship.fireTarget);
 
       if (movingShips.length === 0 && shootingShips.length === 0) return;
 
@@ -614,16 +807,11 @@
       state.dragPoint = null;
       updateTurnStatus();
 
-      state.projectiles = shootingShips.map((shot) => ({
-        ship: shot.ship,
-        ownerShipId: shot.ship.id,
-        x: shot.startX,
-        y: shot.startY,
-        dirX: shot.dirX,
-        dirY: shot.dirY,
-        damage: shot.damage,
-        alive: true,
-      }));
+      state.projectiles = [];
+      for (const ship of shootingShips) {
+        const newProjectiles = spawnProjectilesForShip(ship);
+        state.projectiles.push(...newProjectiles);
+      }
 
       const startedAt = performance.now();
       let lastNow = startedAt;
@@ -647,7 +835,7 @@
         for (const projectile of state.projectiles) {
           if (!projectile.alive) continue;
 
-          const step = SHOT_SPEED * dt;
+          const step = (projectile.projectileSpeed || DEFAULT_PROJECTILE_SPEED) * dt;
           projectile.x += projectile.dirX * step;
           projectile.y += projectile.dirY * step;
 
@@ -669,7 +857,7 @@
             if (target.id === projectile.ownerShipId) continue;
 
             if (Math.hypot(projectile.x - target.x, projectile.y - target.y) <= HIT_RADIUS) {
-              addImpactEffect(projectile.x, projectile.y);
+              addImpactEffect(projectile.x, projectile.y, projectile.impactScale || 1);
               target.hp = Math.max(0, target.hp - projectile.damage);
               target.hitFlashUntil = performance.now() + 180;
 
