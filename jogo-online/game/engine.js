@@ -828,12 +828,13 @@
       }];
     }
 
-    function applyExplosionDamage(projectile, impactX, impactY) {
+    function applyExplosionDamage(projectile, impactX, impactY, primaryTargetId = null) {
       const splashRadius = projectile.splashRadius || 0;
       if (splashRadius <= 0) return;
 
       for (const target of getAliveShips()) {
         if (target.id === projectile.ownerShipId) continue;
+        if (primaryTargetId !== null && target.id === primaryTargetId) continue;
 
         const distance = Math.hypot(impactX - target.x, impactY - target.y);
         if (distance > splashRadius) continue;
@@ -919,6 +920,20 @@
       return 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
+    function resetPlanningPhase() {
+      state.animating = false;
+      state.animationFrameId = null;
+      state.projectiles = [];
+      state.planningDone[1] = false;
+      state.planningDone[2] = false;
+      state.currentPlanningPlayer = 1;
+      state.selectedShipId = null;
+      state.dragging = false;
+      state.dragPoint = null;
+      updateTurnStatus();
+      draw();
+    }
+
     function executeTurn() {
       if (state.animating) return;
       if (!(state.planningDone[1] && state.planningDone[2])) return;
@@ -941,7 +956,10 @@
 
       const shootingShips = getAliveShips().filter((ship) => ship.fireTarget);
 
-      if (movingShips.length === 0 && shootingShips.length === 0) return;
+      if (movingShips.length === 0 && shootingShips.length === 0) {
+        resetPlanningPhase();
+        return;
+      }
 
       state.animating = true;
       state.dragging = false;
@@ -1018,7 +1036,7 @@
               }
 
               if (projectile.weaponType === 'explosive') {
-                applyExplosionDamage(projectile, projectile.x, projectile.y);
+                applyExplosionDamage(projectile, projectile.x, projectile.y, target.id);
                 addImpactEffect(projectile.x, projectile.y, 2.1);
               }
 
@@ -1049,15 +1067,7 @@
           ship.fireTarget = null;
         }
 
-        state.animating = false;
-        state.animationFrameId = null;
-        state.projectiles = [];
-        state.planningDone[1] = false;
-        state.planningDone[2] = false;
-        state.currentPlanningPlayer = 1;
-        state.selectedShipId = null;
-        updateTurnStatus();
-        draw();
+        resetPlanningPhase();
       }
 
       state.animationFrameId = requestAnimationFrame(tick);
@@ -1160,7 +1170,7 @@
       document.getElementById('clearDestinations').addEventListener('click', () => {
         if (state.animating) return;
 
-        for (const ship of getAliveShips()) {
+        for (const ship of getPlanningShips(state.currentPlanningPlayer)) {
           ship.destination = null;
           ship.fireTarget = null;
         }
