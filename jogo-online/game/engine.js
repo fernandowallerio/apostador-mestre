@@ -13,7 +13,8 @@
         speed: 1.25,
         damage: 15,
         size: 11,
-        hp: 80
+        hp: 80,
+        shape: 'interceptor'
       },
       fragata: {
         type: 'Fragata',
@@ -22,7 +23,8 @@
         speed: 1.0,
         damage: 25,
         size: 14,
-        hp: 120
+        hp: 120,
+        shape: 'fragata'
       },
       cruzador: {
         type: 'Cruzador',
@@ -31,7 +33,8 @@
         speed: 0.8,
         damage: 40,
         size: 18,
-        hp: 180
+        hp: 180,
+        shape: 'cruzador'
       },
       sniper: {
         type: 'Sniper',
@@ -40,7 +43,8 @@
         speed: 0.85,
         damage: 50,
         size: 12,
-        hp: 70
+        hp: 70,
+        shape: 'sniper'
       },
       artilharia: {
         type: 'Artilharia',
@@ -49,7 +53,8 @@
         speed: 0.6,
         damage: 60,
         size: 19,
-        hp: 150
+        hp: 150,
+        shape: 'artilharia'
       },
       rastreadora: {
         type: 'Rastreadora',
@@ -58,7 +63,8 @@
         speed: 0.9,
         damage: 35,
         size: 13,
-        hp: 100
+        hp: 100,
+        shape: 'rastreadora'
       }
     };
 
@@ -100,6 +106,7 @@
           speed: def.speed,
           damage: def.damage,
           size: def.size,
+          shape: def.shape,
           color: '#8ec8ff',
           destination: null,
           fireTarget: null,
@@ -127,6 +134,7 @@
           speed: def.speed,
           damage: def.damage,
           size: def.size,
+          shape: def.shape,
           color: '#ffb0b0',
           destination: null,
           fireTarget: null,
@@ -210,7 +218,7 @@
     }
 
     function getShipAt(x, y) {
-      return ships.find((ship) => ship.alive && Math.hypot(x - ship.x, y - ship.y) <= 16) || null;
+      return ships.find((ship) => ship.alive && Math.hypot(x - ship.x, y - ship.y) <= 20) || null;
     }
 
     function getSelectedShip() {
@@ -298,30 +306,113 @@
       ctx.setLineDash([]);
     }
 
-    function drawShip(ship, selected) {
-      const now = performance.now();
-      const size = ship.size || 14;
-      const p1 = { x: ship.x, y: ship.y - size };
-      const p2 = { x: ship.x - size * 0.75, y: ship.y + size * 0.75 };
-      const p3 = { x: ship.x + size * 0.75, y: ship.y + size * 0.75 };
-      const hitFlashOn = ship.hitFlashUntil > now && Math.floor(now / 55) % 2 === 0;
-
+    function drawInterceptor(ship) {
+      const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.lineTo(p3.x, p3.y);
+      ctx.moveTo(ship.x, ship.y - s - 2);
+      ctx.lineTo(ship.x - s * 0.55, ship.y + s * 0.8);
+      ctx.lineTo(ship.x, ship.y + s * 0.25);
+      ctx.lineTo(ship.x + s * 0.55, ship.y + s * 0.8);
       ctx.closePath();
-      ctx.fillStyle = hitFlashOn ? '#ffffff' : ship.color;
+      ctx.fill();
+    }
+
+    function drawFragata(ship) {
+      const s = ship.size;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y - s);
+      ctx.lineTo(ship.x - s * 0.75, ship.y + s * 0.8);
+      ctx.lineTo(ship.x + s * 0.75, ship.y + s * 0.8);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawCruzador(ship) {
+      const s = ship.size;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y - s);
+      ctx.lineTo(ship.x - s * 0.95, ship.y + s * 0.2);
+      ctx.lineTo(ship.x - s * 0.6, ship.y + s);
+      ctx.lineTo(ship.x + s * 0.6, ship.y + s);
+      ctx.lineTo(ship.x + s * 0.95, ship.y + s * 0.2);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawSniper(ship) {
+      const s = ship.size;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y - s * 1.25);
+      ctx.lineTo(ship.x - s * 0.45, ship.y + s);
+      ctx.lineTo(ship.x, ship.y + s * 0.45);
+      ctx.lineTo(ship.x + s * 0.45, ship.y + s);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawArtilharia(ship) {
+      const s = ship.size;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y - s * 0.9);
+      ctx.lineTo(ship.x - s, ship.y + s * 0.15);
+      ctx.lineTo(ship.x - s * 0.75, ship.y + s);
+      ctx.lineTo(ship.x + s * 0.75, ship.y + s);
+      ctx.lineTo(ship.x + s, ship.y + s * 0.15);
+      ctx.closePath();
       ctx.fill();
 
-      ctx.lineWidth = selected ? 2.5 : 1;
+      ctx.fillRect(ship.x - s * 0.18, ship.y - s * 1.25, s * 0.36, s * 0.55);
+    }
+
+    function drawRastreadora(ship) {
+      const s = ship.size;
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y - s);
+      ctx.lineTo(ship.x - s * 0.8, ship.y);
+      ctx.lineTo(ship.x, ship.y + s);
+      ctx.lineTo(ship.x + s * 0.8, ship.y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawShip(ship, selected) {
+      const now = performance.now();
+      const hitFlashOn = ship.hitFlashUntil > now && Math.floor(now / 55) % 2 === 0;
+
+      ctx.fillStyle = hitFlashOn ? '#ffffff' : ship.color;
       ctx.strokeStyle = selected ? '#ffffff' : 'rgba(230, 240, 255, 0.5)';
+      ctx.lineWidth = selected ? 2.5 : 1;
+
+      switch (ship.shape) {
+        case 'interceptor':
+          drawInterceptor(ship);
+          break;
+        case 'fragata':
+          drawFragata(ship);
+          break;
+        case 'cruzador':
+          drawCruzador(ship);
+          break;
+        case 'sniper':
+          drawSniper(ship);
+          break;
+        case 'artilharia':
+          drawArtilharia(ship);
+          break;
+        case 'rastreadora':
+          drawRastreadora(ship);
+          break;
+        default:
+          drawFragata(ship);
+      }
+
       ctx.stroke();
 
       const hpRatio = Math.max(0, ship.hp) / ship.maxHp;
-      const barWidth = 28;
+      const barWidth = 32;
       const barX = ship.x - barWidth / 2;
-      const barY = ship.y - 22;
+      const barY = ship.y - ship.size - 14;
+
       ctx.fillStyle = 'rgba(15, 25, 45, 0.9)';
       ctx.fillRect(barX, barY, barWidth, 4);
       ctx.fillStyle = hpRatio > 0.5 ? '#70e070' : hpRatio > 0.25 ? '#ffd46a' : '#ff6b6b';
