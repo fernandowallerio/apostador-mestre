@@ -113,7 +113,8 @@
           hp: def.hp,
           maxHp: def.hp,
           alive: true,
-          hitFlashUntil: 0
+          hitFlashUntil: 0,
+          angle: Math.PI / 2
         });
       });
 
@@ -141,7 +142,8 @@
           hp: def.hp,
           maxHp: def.hp,
           alive: true,
-          hitFlashUntil: 0
+          hitFlashUntil: 0,
+          angle: -Math.PI / 2
         });
       });
 
@@ -167,6 +169,10 @@
 
     const SHOT_SPEED = 0.272;
     const HIT_RADIUS = 13;
+
+    function getAngleToPoint(ship, point) {
+      return Math.atan2(point.y - ship.y, point.x - ship.x) + Math.PI / 2;
+    }
 
     function resizeCanvas() {
       const rect = canvas.getBoundingClientRect();
@@ -309,10 +315,10 @@
     function drawInterceptor(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(ship.x, ship.y - s - 2);
-      ctx.lineTo(ship.x - s * 0.55, ship.y + s * 0.8);
-      ctx.lineTo(ship.x, ship.y + s * 0.25);
-      ctx.lineTo(ship.x + s * 0.55, ship.y + s * 0.8);
+      ctx.moveTo(0, -s - 2);
+      ctx.lineTo(-s * 0.55, s * 0.8);
+      ctx.lineTo(0, s * 0.25);
+      ctx.lineTo(s * 0.55, s * 0.8);
       ctx.closePath();
       ctx.fill();
     }
@@ -320,9 +326,9 @@
     function drawFragata(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(ship.x, ship.y - s);
-      ctx.lineTo(ship.x - s * 0.75, ship.y + s * 0.8);
-      ctx.lineTo(ship.x + s * 0.75, ship.y + s * 0.8);
+      ctx.moveTo(0, -s);
+      ctx.lineTo(-s * 0.75, s * 0.8);
+      ctx.lineTo(s * 0.75, s * 0.8);
       ctx.closePath();
       ctx.fill();
     }
@@ -330,11 +336,11 @@
     function drawCruzador(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(ship.x, ship.y - s);
-      ctx.lineTo(ship.x - s * 0.95, ship.y + s * 0.2);
-      ctx.lineTo(ship.x - s * 0.6, ship.y + s);
-      ctx.lineTo(ship.x + s * 0.6, ship.y + s);
-      ctx.lineTo(ship.x + s * 0.95, ship.y + s * 0.2);
+      ctx.moveTo(0, -s);
+      ctx.lineTo(-s * 0.95, s * 0.2);
+      ctx.lineTo(-s * 0.6, s);
+      ctx.lineTo(s * 0.6, s);
+      ctx.lineTo(s * 0.95, s * 0.2);
       ctx.closePath();
       ctx.fill();
     }
@@ -342,10 +348,10 @@
     function drawSniper(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(ship.x, ship.y - s * 1.25);
-      ctx.lineTo(ship.x - s * 0.45, ship.y + s);
-      ctx.lineTo(ship.x, ship.y + s * 0.45);
-      ctx.lineTo(ship.x + s * 0.45, ship.y + s);
+      ctx.moveTo(0, -s * 1.25);
+      ctx.lineTo(-s * 0.45, s);
+      ctx.lineTo(0, s * 0.45);
+      ctx.lineTo(s * 0.45, s);
       ctx.closePath();
       ctx.fill();
     }
@@ -353,24 +359,24 @@
     function drawArtilharia(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(ship.x, ship.y - s * 0.9);
-      ctx.lineTo(ship.x - s, ship.y + s * 0.15);
-      ctx.lineTo(ship.x - s * 0.75, ship.y + s);
-      ctx.lineTo(ship.x + s * 0.75, ship.y + s);
-      ctx.lineTo(ship.x + s, ship.y + s * 0.15);
+      ctx.moveTo(0, -s * 0.9);
+      ctx.lineTo(-s, s * 0.15);
+      ctx.lineTo(-s * 0.75, s);
+      ctx.lineTo(s * 0.75, s);
+      ctx.lineTo(s, s * 0.15);
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillRect(ship.x - s * 0.18, ship.y - s * 1.25, s * 0.36, s * 0.55);
+      ctx.fillRect(-s * 0.18, -s * 1.25, s * 0.36, s * 0.55);
     }
 
     function drawRastreadora(ship) {
       const s = ship.size;
       ctx.beginPath();
-      ctx.moveTo(ship.x, ship.y - s);
-      ctx.lineTo(ship.x - s * 0.8, ship.y);
-      ctx.lineTo(ship.x, ship.y + s);
-      ctx.lineTo(ship.x + s * 0.8, ship.y);
+      ctx.moveTo(0, -s);
+      ctx.lineTo(-s * 0.8, 0);
+      ctx.lineTo(0, s);
+      ctx.lineTo(s * 0.8, 0);
       ctx.closePath();
       ctx.fill();
     }
@@ -378,6 +384,10 @@
     function drawShip(ship, selected) {
       const now = performance.now();
       const hitFlashOn = ship.hitFlashUntil > now && Math.floor(now / 55) % 2 === 0;
+
+      ctx.save();
+      ctx.translate(ship.x, ship.y);
+      ctx.rotate(ship.angle || 0);
 
       ctx.fillStyle = hitFlashOn ? '#ffffff' : ship.color;
       ctx.strokeStyle = selected ? '#ffffff' : 'rgba(230, 240, 255, 0.5)';
@@ -407,6 +417,7 @@
       }
 
       ctx.stroke();
+      ctx.restore();
 
       const hpRatio = Math.max(0, ship.hp) / ship.maxHp;
       const barWidth = 32;
@@ -449,45 +460,6 @@
         ctx.arc(effect.x, effect.y, radius + 5, 0, Math.PI * 2);
         ctx.stroke();
       }
-    }
-
-    function drawDestination(ship) {
-      if (!ship.destination) return;
-
-      ctx.strokeStyle = 'rgba(88, 166, 255, 0.9)';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(ship.x, ship.y);
-      ctx.lineTo(ship.destination.x, ship.destination.y);
-      ctx.stroke();
-
-      ctx.fillStyle = 'rgba(88, 166, 255, 0.95)';
-      ctx.beginPath();
-      ctx.arc(ship.destination.x, ship.destination.y, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    function drawFireDirection(ship) {
-      if (!ship.fireTarget) return;
-
-      ctx.strokeStyle = 'rgba(255, 140, 140, 0.30)';
-      ctx.lineWidth = 4.2;
-      ctx.beginPath();
-      ctx.moveTo(ship.x, ship.y);
-      ctx.lineTo(ship.fireTarget.x, ship.fireTarget.y);
-      ctx.stroke();
-
-      ctx.strokeStyle = 'rgba(255, 125, 125, 0.95)';
-      ctx.lineWidth = 2.1;
-      ctx.beginPath();
-      ctx.moveTo(ship.x, ship.y);
-      ctx.lineTo(ship.fireTarget.x, ship.fireTarget.y);
-      ctx.stroke();
-
-      ctx.fillStyle = 'rgba(255, 140, 140, 1)';
-      ctx.beginPath();
-      ctx.arc(ship.fireTarget.x, ship.fireTarget.y, 4.2, 0, Math.PI * 2);
-      ctx.fill();
     }
 
     function drawDragPreview(ship) {
@@ -547,12 +519,6 @@
       }
 
       if (selectedShip) drawRange(selectedShip);
-
-      for (const ship of getAliveShips()) {
-        drawDestination(ship);
-        drawFireDirection(ship);
-      }
-
       if (selectedShip) drawDragPreview(selectedShip);
 
       drawProjectiles();
@@ -593,6 +559,7 @@
             endX: target.x,
             endY: target.y,
             duration: Math.max(460, Math.min(2900, (distance * 6.9) / ship.speed)),
+            angle: getAngleToPoint(ship, target)
           };
         });
 
@@ -645,6 +612,7 @@
           const eased = easeInOutCubic(t);
           movement.ship.x = movement.startX + (movement.endX - movement.startX) * eased;
           movement.ship.y = movement.startY + (movement.endY - movement.startY) * eased;
+          movement.ship.angle = movement.angle;
           if (t < 1) anyShipMoving = true;
         }
 
@@ -763,6 +731,7 @@
           ? clampFireTarget(selectedShip, point)
           : clampDestination(selectedShip, point);
 
+        selectedShip.angle = getAngleToPoint(selectedShip, state.dragPoint);
         draw();
       });
 
@@ -774,8 +743,10 @@
         if (canControlShip(selectedShip) && state.dragPoint) {
           if (state.dragType === 'fire') {
             selectedShip.fireTarget = { ...state.dragPoint };
+            selectedShip.angle = getAngleToPoint(selectedShip, state.dragPoint);
           } else {
             selectedShip.destination = { ...state.dragPoint };
+            selectedShip.angle = getAngleToPoint(selectedShip, state.dragPoint);
           }
         }
 
