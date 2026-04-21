@@ -10,7 +10,7 @@
   <div class="top-bar">
     <div>
       <strong>Protótipo: Batalha Espacial</strong>
-      <div class="hint">Jogador 1 planeja, depois Jogador 2. Após ambos finalizarem, execute o turno simultâneo.</div>
+      <div class="hint">Cada jogador escolherá 3 naves antes da batalha.</div>
       <div class="hint" id="turnStatus"></div>
     </div>
 
@@ -26,6 +26,38 @@
 
   <div class="arena-wrap">
     <canvas id="spaceCanvas" aria-label="Área de batalha espacial"></canvas>
+  </div>
+
+  <div id="fleetOverlay" class="fleet-overlay">
+    <div class="fleet-panel">
+      <div class="fleet-header">
+        <h2>Escolha sua frota</h2>
+        <p>Selecione exatamente 3 naves para esta partida.</p>
+      </div>
+
+      <div id="fleetStatus" class="fleet-status">
+        Escolha 3 naves para continuar.
+      </div>
+
+      <div id="fleetOptions" class="fleet-options"></div>
+
+      <div class="fleet-actions">
+        <button id="confirmFleetBtn" type="button" disabled>Confirmar frota</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="waitingOverlay" class="fleet-overlay hidden">
+    <div class="fleet-panel waiting-panel">
+      <div class="fleet-header">
+        <h2>Frota confirmada</h2>
+        <p>Sua escolha foi registrada.</p>
+      </div>
+
+      <div class="fleet-status waiting-status">
+        Aguardando o adversário confirmar a frota...
+      </div>
+    </div>
   </div>
 
   <script src="../game/engine.js"></script>
