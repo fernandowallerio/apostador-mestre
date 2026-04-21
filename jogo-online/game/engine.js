@@ -62,7 +62,7 @@
         weaponType: 'beam',
         projectileColor: '#ffffff',
         projectileSize: 2,
-        projectileSpeed: 0.55
+        projectileSpeed: 0.80
       },
       artilharia: {
         type: 'Artilharia',
@@ -76,7 +76,8 @@
         weaponType: 'explosive',
         projectileColor: '#ffae42',
         projectileSize: 6,
-        projectileSpeed: 0.18
+        projectileSpeed: 0.18,
+        splashRadius: 34
       },
       rastreadora: {
         type: 'Rastreadora',
@@ -90,7 +91,8 @@
         weaponType: 'homing',
         projectileColor: '#ff5cff',
         projectileSize: 3.5,
-        projectileSpeed: 0.24
+        projectileSpeed: 0.24,
+        turnRate: 0.0032
       }
     };
 
@@ -146,7 +148,9 @@
           projectileSize: def.projectileSize,
           projectileSpeed: def.projectileSpeed,
           burstCount: def.burstCount || 1,
-          spreadAngle: def.spreadAngle || 0
+          spreadAngle: def.spreadAngle || 0,
+          splashRadius: def.splashRadius || 0,
+          turnRate: def.turnRate || 0
         });
       });
 
@@ -181,7 +185,9 @@
           projectileSize: def.projectileSize,
           projectileSpeed: def.projectileSpeed,
           burstCount: def.burstCount || 1,
-          spreadAngle: def.spreadAngle || 0
+          spreadAngle: def.spreadAngle || 0,
+          splashRadius: def.splashRadius || 0,
+          turnRate: def.turnRate || 0
         });
       });
 
@@ -210,6 +216,12 @@
 
     function getAngleToPoint(ship, point) {
       return Math.atan2(point.y - ship.y, point.x - ship.x) + Math.PI / 2;
+    }
+
+    function normalizeAngle(angle) {
+      while (angle > Math.PI) angle -= Math.PI * 2;
+      while (angle < -Math.PI) angle += Math.PI * 2;
+      return angle;
     }
 
     function resizeCanvas() {
@@ -275,6 +287,12 @@
 
     function getPlanningShips(player) {
       return getAliveShips().filter((ship) => ship.player === player);
+    }
+
+    function getEnemyShips(ownerShipId) {
+      const owner = ships.find((ship) => ship.id === ownerShipId);
+      if (!owner) return [];
+      return getAliveShips().filter((ship) => ship.player !== owner.player);
     }
 
     function canControlShip(ship) {
@@ -606,8 +624,15 @@
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(0, size * 5);
-          ctx.lineTo(0, -size * 5);
+          ctx.moveTo(0, size * 7);
+          ctx.lineTo(0, -size * 7);
+          ctx.stroke();
+
+          ctx.strokeStyle = '#ffffffaa';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(0, size * 4);
+          ctx.lineTo(0, -size * 4);
           ctx.stroke();
           break;
 
@@ -639,6 +664,13 @@
           ctx.lineTo(size * 0.7, size * 1.0);
           ctx.closePath();
           ctx.fill();
+
+          ctx.strokeStyle = color + '55';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, size * 2.3);
+          ctx.lineTo(0, size * 4.8);
+          ctx.stroke();
           break;
 
         default:
@@ -727,6 +759,59 @@
         }];
       }
 
+      if (weaponType === 'beam') {
+        return [{
+          ownerShipId: ship.id,
+          weaponType,
+          projectileColor,
+          projectileSize,
+          projectileSpeed,
+          x: ship.x,
+          y: ship.y,
+          dirX,
+          dirY,
+          damage: ship.damage,
+          impactScale: 0.9,
+          alive: true
+        }];
+      }
+
+      if (weaponType === 'explosive') {
+        return [{
+          ownerShipId: ship.id,
+          weaponType,
+          projectileColor,
+          projectileSize,
+          projectileSpeed,
+          x: ship.x,
+          y: ship.y,
+          dirX,
+          dirY,
+          damage: ship.damage,
+          splashRadius: ship.splashRadius || 32,
+          impactScale: 1.8,
+          alive: true
+        }];
+      }
+
+      if (weaponType === 'homing') {
+        return [{
+          ownerShipId: ship.id,
+          weaponType,
+          projectileColor,
+          projectileSize,
+          projectileSpeed,
+          x: ship.x,
+          y: ship.y,
+          dirX,
+          dirY,
+          damage: ship.damage,
+          turnRate: ship.turnRate || 0.003,
+          impactScale: 1.1,
+          alive: true
+        }];
+      }
+
       return [{
         ownerShipId: ship.id,
         weaponType,
@@ -741,6 +826,62 @@
         impactScale: 1,
         alive: true
       }];
+    }
+
+    function applyExplosionDamage(projectile, impactX, impactY) {
+      const splashRadius = projectile.splashRadius || 0;
+      if (splashRadius <= 0) return;
+
+      for (const target of getAliveShips()) {
+        if (target.id === projectile.ownerShipId) continue;
+
+        const distance = Math.hypot(impactX - target.x, impactY - target.y);
+        if (distance > splashRadius) continue;
+
+        const factor = 1 - (distance / splashRadius);
+        const splashDamage = Math.max(8, Math.round(projectile.damage * 0.45 * factor));
+
+        target.hp = Math.max(0, target.hp - splashDamage);
+        target.hitFlashUntil = performance.now() + 160;
+
+        if (target.hp === 0) {
+          addDestructionEffect(target.x, target.y);
+          target.alive = false;
+          target.destination = null;
+          target.fireTarget = null;
+          if (state.selectedShipId === target.id) {
+            state.selectedShipId = null;
+          }
+        }
+      }
+    }
+
+    function updateHomingProjectile(projectile, dt) {
+      const enemies = getEnemyShips(projectile.ownerShipId);
+      if (enemies.length === 0) return;
+
+      let closestTarget = null;
+      let closestDistance = Infinity;
+
+      for (const enemy of enemies) {
+        const dist = Math.hypot(enemy.x - projectile.x, enemy.y - projectile.y);
+        if (dist < closestDistance) {
+          closestDistance = dist;
+          closestTarget = enemy;
+        }
+      }
+
+      if (!closestTarget) return;
+
+      const desiredAngle = Math.atan2(closestTarget.y - projectile.y, closestTarget.x - projectile.x);
+      const currentAngle = Math.atan2(projectile.dirY, projectile.dirX);
+      const angleDiff = normalizeAngle(desiredAngle - currentAngle);
+      const maxTurn = (projectile.turnRate || 0.003) * dt;
+      const appliedTurn = Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
+      const newAngle = currentAngle + appliedTurn;
+
+      projectile.dirX = Math.cos(newAngle);
+      projectile.dirY = Math.sin(newAngle);
     }
 
     function draw() {
@@ -835,6 +976,10 @@
         for (const projectile of state.projectiles) {
           if (!projectile.alive) continue;
 
+          if (projectile.weaponType === 'homing') {
+            updateHomingProjectile(projectile, dt);
+          }
+
           const step = (projectile.projectileSpeed || DEFAULT_PROJECTILE_SPEED) * dt;
           projectile.x += projectile.dirX * step;
           projectile.y += projectile.dirY * step;
@@ -858,6 +1003,7 @@
 
             if (Math.hypot(projectile.x - target.x, projectile.y - target.y) <= HIT_RADIUS) {
               addImpactEffect(projectile.x, projectile.y, projectile.impactScale || 1);
+
               target.hp = Math.max(0, target.hp - projectile.damage);
               target.hitFlashUntil = performance.now() + 180;
 
@@ -869,6 +1015,11 @@
                 if (state.selectedShipId === target.id) {
                   state.selectedShipId = null;
                 }
+              }
+
+              if (projectile.weaponType === 'explosive') {
+                applyExplosionDamage(projectile, projectile.x, projectile.y);
+                addImpactEffect(projectile.x, projectile.y, 2.1);
               }
 
               projectile.alive = false;
